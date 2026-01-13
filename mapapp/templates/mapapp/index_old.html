@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>বাংলাদেশ মানচিত্র - Bangladesh Map</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', 'Noto Sans Bengali', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 200px;
+        }
+        
+        .filter-group label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #ecf0f1;
+        }
+        
+        .filter-group select {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .filter-group select:focus {
+            outline: 2px solid #3498db;
+        }
+        
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+            background: white;
+        }
+        
+        .leaflet-label {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            white-space: nowrap !important;
+            pointer-events: none !important;
+            font-family: 'Arial', 'Noto Sans Bengali', sans-serif !important;
+            text-align: center !important;
+            display: block !important;
+            color: #2c3e50 !important;
+            z-index: 1000 !important;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(255, 255, 255, 0.8), 1px -1px 2px rgba(255, 255, 255, 0.8), -1px 1px 2px rgba(255, 255, 255, 0.8) !important;
+        }
+        
+        .label-icon {
+            background: transparent !important;
+            border: none !important;
+        }
+        
+        .label-icon .leaflet-label {
+            position: relative !important;
+            display: block !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>বাংলাদেশ মানচিত্র - Bangladesh Map</h1>
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="division-select">বিভাগ (Division):</label>
+                    <select id="division-select">
+                        <option value="">সব বিভাগ (All Divisions)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="district-select">জেলা (District):</label>
+                    <select id="district-select" disabled>
+                        <option value="">জেলা নির্বাচন করুন (Select District)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="upazila-select">উপজেলা (Upazila):</label>
+                    <select id="upazila-select" disabled>
+                        <option value="">উপজেলা নির্বাচন করুন (Select Upazila)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Initialize map centered on Bangladesh
+        const map = L.map('map', {
+            zoomControl: true,
+            attributionControl: false
+        }).setView([23.6850, 90.3563], 7.5);
+        
+        // Remove default tile layer - show only white background
+        // No base map tiles
+        
+        // Beautiful color palette with red, green, yellow, blue, orange, sky blue, magenta, pink
+        const baseColors = [
+            'rgba(255, 0, 0, 0.4)',        // Red
+            'rgba(0, 255, 0, 0.4)',        // Green
+            'rgba(255, 255, 0, 0.4)',      // Yellow
+            'rgba(0, 0, 255, 0.4)',        // Blue
+            'rgba(255, 165, 0, 0.4)',      // Orange
+            'rgba(135, 206, 250, 0.4)',   // Sky Blue
+            'rgba(255, 0, 255, 0.4)',      // Magenta
+            'rgba(255, 192, 203, 0.4)',   // Pink
+            'rgba(255, 20, 147, 0.4)',    // Deep Pink
+            'rgba(0, 191, 255, 0.4)',     // Deep Sky Blue
+            'rgba(50, 205, 50, 0.4)',     // Lime Green
+            'rgba(255, 140, 0, 0.4)',     // Dark Orange
+            'rgba(186, 85, 211, 0.4)',    // Medium Orchid
+            'rgba(255, 69, 0, 0.4)',      // Red Orange
+            'rgba(0, 206, 209, 0.4)',     // Dark Turquoise
+            'rgba(255, 105, 180, 0.4)',   // Hot Pink
+            'rgba(30, 144, 255, 0.4)',    // Dodger Blue
+            'rgba(255, 215, 0, 0.4)',      // Gold
+            'rgba(220, 20, 60, 0.4)',     // Crimson
+            'rgba(0, 250, 154, 0.4)',     // Medium Spring Green
+            'rgba(255, 20, 147, 0.4)',    // Deep Pink
+            'rgba(72, 209, 204, 0.4)',    // Medium Turquoise
+            'rgba(255, 127, 80, 0.4)',    // Coral
+            'rgba(138, 43, 226, 0.4)',    // Blue Violet
+            'rgba(255, 160, 122, 0.4)',   // Light Salmon
+            'rgba(32, 178, 170, 0.4)',    // Light Sea Green
+            'rgba(255, 182, 193, 0.4)',   // Light Pink
+            'rgba(70, 130, 180, 0.4)',    // Steel Blue
+            'rgba(255, 99, 71, 0.4)',      // Tomato
+            'rgba(60, 179, 113, 0.4)',    // Medium Sea Green
+        ];
+        
+        const divisionColors = baseColors;
+        
+        const districtColors = baseColors.map(color => color.replace('0.4', '0.5'));
+        
+        const upazilaColors = baseColors.map(color => color.replace('0.4', '0.6'));
+        
+        // Function to assign colors ensuring each polygon gets a different color
+        function assignColors(geojson, colorPalette) {
+            const colorMap = {};
+            const usedIndices = new Set();
+            
+            // Get unique names first
+            const uniqueNames = [...new Set(geojson.features.map(f => f.properties.name_en))];
+            
+            // Assign colors using hash-based distribution for better variety
+            uniqueNames.forEach((name, index) => {
+                // Create a hash from the name for consistent but varied color assignment
+                let hash = 0;
+                for (let i = 0; i < name.length; i++) {
+                    hash = ((hash << 5) - hash) + name.charCodeAt(i);
+                    hash = hash & hash; // Convert to 32-bit integer
+                }
+                
+                // Use hash to get a color index, ensuring we cycle through all colors
+                let colorIndex = Math.abs(hash) % colorPalette.length;
+                
+                // If we've used this index, try next available
+                let attempts = 0;
+                while (usedIndices.has(colorIndex) && attempts < colorPalette.length) {
+                    colorIndex = (colorIndex + 1) % colorPalette.length;
+                    attempts++;
+                }
+                
+                // If still conflict, use sequential assignment
+                if (usedIndices.has(colorIndex)) {
+                    colorIndex = index % colorPalette.length;
+                }
+                
+                usedIndices.add(colorIndex);
+                colorMap[name] = colorPalette[colorIndex];
+            });
+            
+            return colorMap;
+        }
+        
+        let currentLayer = null;
+        let currentLayerType = 'divisions';
+        let selectedDivision = null;
+        let selectedDistrict = null;
+        let selectedUpazila = null;
+        let allUpazilas = [];
+        let labelMarkers = [];
+        
+        // Load divisions dropdown
+        async function loadDivisions() {
+            try {
+                const response = await fetch('/api/divisions/');
+                const data = await response.json();
+                const select = document.getElementById('division-select');
+                
+                data.divisions.forEach(div => {
+                    const option = document.createElement('option');
+                    option.value = div.name_en;
+                    option.textContent = div.name_bn || div.name_en;
+                    option.setAttribute('data-bn', div.name_bn);
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading divisions:', error);
+            }
+        }
+        
+        // Load districts dropdown
+        async function loadDistricts(divisionName) {
+            const select = document.getElementById('district-select');
+            select.innerHTML = '<option value="">জেলা নির্বাচন করুন (Select District)</option>';
+            select.disabled = !divisionName;
+            
+            if (!divisionName) return;
+            
+            try {
+                const url = divisionName ? `/api/districts/?division=${encodeURIComponent(divisionName)}` : '/api/districts/';
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                data.districts.forEach(dist => {
+                    const option = document.createElement('option');
+                    option.value = dist.name_en;
+                    option.textContent = dist.name_bn || dist.name_en;
+                    option.setAttribute('data-bn', dist.name_bn);
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading districts:', error);
+            }
+        }
+        
+        // Load upazilas dropdown
+        async function loadUpazilas(districtName) {
+            const select = document.getElementById('upazila-select');
+            select.innerHTML = '<option value="">উপজেলা নির্বাচন করুন (Select Upazila)</option>';
+            select.disabled = !districtName;
+            
+            if (!districtName) return;
+            
+            try {
+                const url = districtName ? `/api/upazilas/?district=${encodeURIComponent(districtName)}` : '/api/upazilas/';
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                data.upazilas.forEach(upz => {
+                    const option = document.createElement('option');
+                    option.value = upz.name_en;
+                    option.textContent = upz.name_bn || upz.name_en;
+                    option.setAttribute('data-bn', upz.name_bn);
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading upazilas:', error);
+            }
+        }
+        
+        // Load and display GeoJSON layer
+        async function loadLayer(layerType, filters = {}) {
+            // Remove existing layer and labels
+            if (currentLayer) {
+                map.removeLayer(currentLayer);
+            }
+            labelMarkers.forEach(marker => map.removeLayer(marker));
+            labelMarkers = [];
+            
+            // Build URL with filters
+            let url = `/api/geojson/${layerType}/`;
+            const params = new URLSearchParams();
+            if (filters.division) params.append('division', filters.division);
+            if (filters.district) params.append('district', filters.district);
+            if (params.toString()) url += '?' + params.toString();
+            
+            try {
+                const response = await fetch(url);
+                const geojson = await response.json();
+                
+                // Determine colors based on layer type with better distribution
+                let colorPalette;
+                if (layerType === 'divisions') {
+                    colorPalette = divisionColors;
+                } else if (layerType === 'districts') {
+                    colorPalette = districtColors;
+                } else {
+                    colorPalette = upazilaColors;
+                }
+                
+                const colorMap = assignColors(geojson, colorPalette);
+                
+                // Special handling for selected upazila
+                if (layerType === 'upazilas' && selectedUpazila) {
+                    geojson.features.forEach(feature => {
+                        if (feature.properties.name_en === selectedUpazila) {
+                            colorMap[feature.properties.name_en] = 'rgba(255, 0, 0, 0.8)'; // Red for selected
+                        }
+                    });
+                }
+                
+                currentLayer = L.geoJSON(geojson, {
+                    style: function(feature) {
+                        const name = feature.properties.name_en;
+                        const isSelected = (layerType === 'upazilas' && selectedUpazila && name === selectedUpazila);
+                        return {
+                            fillColor: colorMap[name] || 'rgba(200, 200, 200, 0.5)',
+                            fillOpacity: isSelected ? 0.9 : 0.6,
+                            color: isSelected ? '#ff0000' : '#333',
+                            weight: isSelected ? 3 : 1.5,
+                            opacity: isSelected ? 1.0 : 0.8
+                        };
+                    },
+                    onEachFeature: function(feature, layer) {
+                        const props = feature.properties;
+                        // Use Bangla name, fallback to English
+                        const name = props.name_bn || props.name_en;
+                        
+                        // Add label at centroid - simple text, no box
+                        if (props.centroid && name) {
+                            // Calculate approximate width based on text length (smaller for compact look)
+                            const textWidth = Math.max(name.length * 8, 60);
+                            
+                            // Create simple text label without box
+                            const labelHtml = `<div class="leaflet-label">${name}</div>`;
+                            
+                            // Centroid is [lon, lat], Leaflet needs [lat, lon]
+                            const label = L.marker([props.centroid[1], props.centroid[0]], {
+                                icon: L.divIcon({
+                                    className: 'label-icon',
+                                    html: labelHtml,
+                                    iconSize: [textWidth, 20],
+                                    iconAnchor: [textWidth / 2, 10]
+                                }),
+                                interactive: false,
+                                zIndexOffset: 2000,
+                                riseOnHover: false
+                            });
+                            
+                            label.addTo(map);
+                            labelMarkers.push(label);
+                        }
+                    }
+                }).addTo(map);
+                
+                // Fit map to bounds (only if not initial division view)
+                if (geojson.features.length > 0) {
+                    if (layerType === 'divisions' && !selectedDivision) {
+                        // For initial division view, make map twice as big
+                        const bounds = currentLayer.getBounds();
+                        // No padding and zoom in to make map fill screen
+                        map.fitBounds(bounds, { 
+                            padding: [0, 0]
+                        });
+                        // Zoom in additional level after fitting to make it bigger
+                        setTimeout(() => {
+                            const currentZoom = map.getZoom();
+                            map.setZoom(currentZoom + 1.5);
+                        }, 200);
+                    } else {
+                        const bounds = currentLayer.getBounds();
+                        map.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                }
+                
+                currentLayerType = layerType;
+            } catch (error) {
+                console.error('Error loading layer:', error);
+            }
+        }
+        
+        // Event listeners
+        document.getElementById('division-select').addEventListener('change', async function(e) {
+            selectedDivision = e.target.value;
+            selectedDistrict = null;
+            selectedUpazila = null;
+            
+            document.getElementById('district-select').value = '';
+            document.getElementById('upazila-select').value = '';
+            
+            if (selectedDivision) {
+                await loadDistricts(selectedDivision);
+                await loadLayer('districts', { division: selectedDivision });
+            } else {
+                document.getElementById('district-select').disabled = true;
+                document.getElementById('upazila-select').disabled = true;
+                await loadLayer('divisions');
+            }
+        });
+        
+        document.getElementById('district-select').addEventListener('change', async function(e) {
+            selectedDistrict = e.target.value;
+            selectedUpazila = null;
+            
+            document.getElementById('upazila-select').value = '';
+            
+            if (selectedDistrict) {
+                await loadUpazilas(selectedDistrict);
+                await loadLayer('upazilas', { 
+                    division: selectedDivision,
+                    district: selectedDistrict 
+                });
+            } else {
+                document.getElementById('upazila-select').disabled = true;
+                if (selectedDivision) {
+                    await loadLayer('districts', { division: selectedDivision });
+                }
+            }
+        });
+        
+        document.getElementById('upazila-select').addEventListener('change', async function(e) {
+            selectedUpazila = e.target.value;
+            
+            if (selectedDistrict) {
+                // Show all upazilas in the district, highlight selected one
+                await loadLayer('upazilas', { 
+                    division: selectedDivision,
+                    district: selectedDistrict 
+                });
+            }
+        });
+        
+        // Initialize
+        loadDivisions();
+        loadLayer('divisions');
+    </script>
+</body>
+</html>
+

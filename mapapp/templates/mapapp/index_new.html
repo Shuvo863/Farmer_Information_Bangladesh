@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>বাংলাদেশ মানচিত্র - Bangladesh Map</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', 'Noto Sans Bengali', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 180px;
+        }
+        
+        .filter-group label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #ecf0f1;
+        }
+        
+        .filter-group select {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+        }
+        
+        .filter-group select:focus {
+            outline: 2px solid #3498db;
+        }
+        
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .table-container {
+            width: 65%;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #ddd;
+            background: #f8f9fa;
+        }
+        
+        .map-container {
+            width: 35%;
+            position: relative;
+            background: white;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+            background: white;
+        }
+        
+        .table-header {
+            padding: 15px 20px;
+            background: #34495e;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-header h2 {
+            font-size: 18px;
+        }
+        
+        .farmer-count {
+            font-size: 16px;
+            font-weight: bold;
+        }
+        
+        .table-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #34495e;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        tr:hover {
+            background: #f5f5f5;
+        }
+        
+        .farmer-img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+        
+        .btn-details {
+            padding: 6px 12px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .btn-details:hover {
+            background: #2980b9;
+        }
+        
+        .pagination {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .pagination button {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        
+        .pagination button:hover:not(:disabled) {
+            background: #3498db;
+            color: white;
+        }
+        
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination .page-info {
+            margin: 0 10px;
+        }
+        
+        /* Modal for details */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            overflow-y: auto;
+        }
+        
+        .modal-content {
+            background: white;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 15px;
+        }
+        
+        .modal-header h2 {
+            color: #2c3e50;
+        }
+        
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: #000;
+        }
+        
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .detail-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        
+        .detail-label {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .detail-value {
+            color: #555;
+        }
+        
+        .detail-img {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .leaflet-label {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            font-size: 11px !important;
+            font-weight: 600 !important;
+            white-space: nowrap !important;
+            pointer-events: none !important;
+            font-family: 'Arial', 'Noto Sans Bengali', sans-serif !important;
+            text-align: center !important;
+            display: block !important;
+            color: #2c3e50 !important;
+            z-index: 1000 !important;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(255, 255, 255, 0.8), 1px -1px 2px rgba(255, 255, 255, 0.8), -1px 1px 2px rgba(255, 255, 255, 0.8) !important;
+        }
+        
+        .label-icon {
+            background: transparent !important;
+            border: none !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>বাংলাদেশ মানচিত্র - Bangladesh Map</h1>
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="division-select">বিভাগ (Division):</label>
+                    <select id="division-select">
+                        <option value="">সব বিভাগ (All Divisions)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="district-select">জেলা (District):</label>
+                    <select id="district-select" disabled>
+                        <option value="">জেলা নির্বাচন করুন (Select District)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="upazila-select">উপজেলা (Upazila):</label>
+                    <select id="upazila-select" disabled>
+                        <option value="">উপজেলা নির্বাচন করুন (Select Upazila)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="class-select">শ্রেণী (Class):</label>
+                    <select id="class-select">
+                        <option value="">সব শ্রেণী (All Classes)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="gender-select">কৃষকের জেন্ডার:</label>
+                    <select id="gender-select">
+                        <option value="">সব (All)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="education-select">শিক্ষাগত যোগ্যতা:</label>
+                    <select id="education-select">
+                        <option value="">সব (All)</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="smartphone-select">স্মার্ট ফোন ব্যবহারকারী:</label>
+                    <select id="smartphone-select">
+                        <option value="">সব (All)</option>
+                        <option value="হ্যাঁ">হ্যাঁ (Yes)</option>
+                        <option value="না">না (No)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="table-container">
+                <div class="table-header">
+                    <h2>কৃষক তালিকা (Farmer List)</h2>
+                    <div class="farmer-count">মোট কৃষক: <span id="total-farmers">0</span></div>
+                </div>
+                <div class="table-wrapper">
+                    <table id="farmer-table">
+                        <thead>
+                            <tr>
+                                <th>IMG</th>
+                                <th>কৃষকের নাম</th>
+                                <th>পিতার নাম</th>
+                                <th>Class</th>
+                                <th>কৃষক পরিচিতি নং</th>
+                                <th>মোট জমি</th>
+                                <th>See Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="farmer-tbody">
+                            <tr>
+                                <td colspan="7" style="text-align: center; padding: 20px;">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="pagination">
+                    <button id="prev-page" disabled>Previous</button>
+                    <span class="page-info">Page <span id="current-page">1</span> of <span id="total-pages">1</span></span>
+                    <button id="next-page" disabled>Next</button>
+                </div>
+            </div>
+            <div class="map-container">
+                <div id="map"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal for farmer details -->
+    <div id="farmer-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>কৃষক বিস্তারিত তথ্য (Farmer Details)</h2>
+                <span class="close" id="close-modal">&times;</span>
+            </div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+    
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // This will be continued in next part due to length...
+        console.log('Template loaded');
+    </script>
+</body>
+</html>
+

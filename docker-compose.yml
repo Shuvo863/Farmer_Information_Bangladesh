@@ -1,0 +1,17 @@
+services:
+  web:
+    build: .
+    container_name: bangladesh_farmer_map
+    ports:
+      - "8113:8113"
+    volumes:
+      - .:/app
+      - static_volume:/app/staticfiles
+    environment:
+      - DEBUG=1
+      - ALLOWED_HOSTS=192.168.101.232,localhost,127.0.0.1
+    restart: unless-stopped
+    command: /app/start.sh
+
+volumes:
+  static_volume:

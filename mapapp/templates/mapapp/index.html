@@ -1,0 +1,2425 @@
+<!DOCTYPE html>
+<html lang="bn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>এলাকাভিত্তিক কৃষকের তথ্য</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', 'Noto Sans Bengali', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: nowrap;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 120px;
+            max-width: 150px;
+            flex: 1;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #ecf0f1;
+        }
+
+        .filter-group select,
+        .filter-group input[type="text"],
+        .filter-group input {
+            height: 42px;
+            padding: 8px 12px;
+            border: 1px solid #dcdde1;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        .filter-group select:focus,
+        .filter-group input[type="text"]:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+
+        .clear-filters-btn {
+            height: 42px;
+            padding: 0 15px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .clear-filters-btn:hover {
+            background-color: #c0392b;
+            transform: translateY(-1px);
+        }
+
+        .clear-filters-btn span {
+            margin-right: 8px;
+            font-size: 1.2em;
+        }
+
+        .btn-search {
+            height: 42px;
+            padding: 0 20px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-search:hover {
+            background: #229954;
+            transform: translateY(-1px);
+        }
+
+        .land-amount-group {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            min-width: 250px;
+            max-width: 300px;
+            flex: 0 0 auto;
+        }
+
+        .land-amount-group label {
+            margin-bottom: 0;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .land-amount-group input {
+            height: 42px;
+            padding: 8px 12px;
+            border: 1px solid #dcdde1;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .filter-group select {
+            width: 100%;
+        }
+
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .table-container {
+            width: 50%;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #ddd;
+            background: #f8f9fa;
+        }
+
+        .map-container {
+            width: 35%;
+            position: relative;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #ddd;
+        }
+
+        .field-force-container {
+            width: 15%;
+            display: flex;
+            flex-direction: column;
+            background: #f8f9fa;
+        }
+
+
+        .field-force-header {
+            background: #27ae60;
+            color: white;
+            padding: 10px 15px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .ff-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .business-selector {
+            width: 100%;
+            height: 32px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            color: white;
+            padding: 0 5px;
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .business-selector option {
+            background: #27ae60;
+            color: white;
+        }
+
+        .business-selector:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .field-force-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .field-force-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0;
+            display: block;
+        }
+
+        .ff-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            font-size: 13px;
+        }
+
+        .ff-table th {
+            background: #27ae60;
+            color: white;
+            text-align: left;
+            padding: 10px 8px;
+            border-bottom: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .ff-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            color: #2c3e50;
+            cursor: pointer;
+            word-break: break-word;
+        }
+
+        .ff-table tr:hover td {
+            background: #f8f9fa;
+        }
+
+        .ff-table tr.selected td {
+            background: #ebf5fb;
+            font-weight: bold;
+            color: #27ae60;
+        }
+
+        .ff-table tr.selected td {
+            background: #ebf5fb;
+            font-weight: bold;
+            color: #27ae60;
+        }
+
+        .map-header {
+            background: #34495e;
+            color: white;
+            padding: 12px 15px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .map-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background: white;
+        }
+
+        .table-header {
+            padding: 15px 20px;
+            background: #34495e;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-header h2 {
+            font-size: 18px;
+        }
+
+        .farmer-count {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .table-wrapper {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background: #34495e;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .farmer-img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .btn-details {
+            padding: 6px 12px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .btn-details:hover {
+            background: #2980b9;
+        }
+
+        .pagination {
+            padding: 15px 20px;
+            background: white;
+            border-top: 1px solid #ddd;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .pagination button {
+            padding: 8px 15px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        .pagination button:hover:not(:disabled) {
+            background: #3498db;
+            color: white;
+        }
+
+        .pagination button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination .page-info {
+            margin: 0 10px;
+        }
+
+        /* Modal for details */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: white;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            color: #2c3e50;
+        }
+
+        .close {
+            color: #aaa;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .close:hover {
+            color: #000;
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .detail-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .detail-label {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            color: #555;
+        }
+
+        .detail-img {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .leaflet-label {
+            background: transparent !important;
+            border: none !important;
+            padding: 0 !important;
+            font-size: 17px !important;
+            font-weight: 600 !important;
+            white-space: nowrap !important;
+            pointer-events: none !important;
+            font-family: 'Arial', 'Noto Sans Bengali', sans-serif !important;
+            text-align: center !important;
+            display: block !important;
+            color: #2c3e50 !important;
+            z-index: 1000 !important;
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8), -1px -1px 2px rgba(255, 255, 255, 0.8), 1px -1px 2px rgba(255, 255, 255, 0.8), -1px 1px 2px rgba(255, 255, 255, 0.8) !important;
+        }
+
+        /* Compass Styles */
+        .map-compass {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            width: 120px;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.3));
+            z-index: 1000;
+        }
+
+        .stats-btn-container {
+            position: absolute;
+            bottom: 110px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .stats-btn {
+            background: #2c3e50;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .stats-btn:hover {
+            background: #34495e;
+            transform: translateY(-2px);
+        }
+
+        .stats-btn.active {
+            background: #e74c3c;
+        }
+
+        /* Gradient Legend Bar */
+        .gradient-legend {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            padding: 10px 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .legend-bar {
+            width: 22px;
+            height: 180px;
+            /* Taller for the 8-color spectrum */
+            background: linear-gradient(to bottom,
+                    rgb(43, 29, 14),
+                    /* Dark Forest Green/Brown (High) */
+                    rgb(0, 64, 64),
+                    /* Teal/Dark Green */
+                    rgb(0, 100, 0),
+                    /* Deep Green */
+                    rgb(60, 179, 113),
+                    /* Medium Green */
+                    rgb(144, 238, 144),
+                    /* Light Green */
+                    rgb(173, 255, 47),
+                    /* Greenish Yellow */
+                    rgb(238, 255, 128),
+                    /* Light Lime (Low) */
+                    rgb(255, 255, 255)
+                    /* White (0) */
+                );
+            border-radius: 4px;
+            margin: 5px 0;
+            border: 1px solid #999;
+        }
+
+        .legend-max,
+        .legend-min {
+            color: #333;
+            font-size: 10px;
+        }
+
+        .legend-title {
+            margin-top: 5px;
+            color: #555;
+            font-size: 9px;
+            writing-mode: horizontal-tb;
+        }
+
+        .map-back-btn-container {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        .back-btn {
+            background: rgba(255, 255, 255, 0.9);
+            color: #2c3e50;
+            border: 2px solid #2c3e50;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-size: 20px;
+        }
+
+        .back-btn:hover {
+            background: #2c3e50;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .back-btn:active {
+            transform: scale(0.9);
+        }
+
+        .compass-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .compass-inner span {
+            position: absolute;
+            font-size: 16px;
+            font-weight: 900;
+            color: #2c3e50;
+            user-select: none;
+        }
+
+        .north {
+            top: -10px;
+        }
+
+        .south {
+            bottom: -10px;
+        }
+
+        .east {
+            right: -5px;
+        }
+
+        .west {
+            left: -5px;
+        }
+
+        .compass-star {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+
+        /* SVG Star Styling */
+        .star-svg {
+            width: 100%;
+            height: 100%;
+            fill: #2c3e50;
+        }
+
+        .star-north-red {
+            fill: #e74c3c;
+        }
+
+        .label-icon {
+            background: transparent !important;
+            border: none !important;
+        }
+
+        .leaflet-interactive {
+            cursor: pointer !important;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>এলাকাভিত্তিক কৃষকের তথ্য</h1>
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="division-select">বিভাগ:</label>
+                    <select id="division-select" autocomplete="off">
+                        <option value="">সব বিভাগ</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="district-select">জেলা:</label>
+                    <select id="district-select" disabled autocomplete="off">
+                        <option value="">জেলা নির্বাচন করুন</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="upazila-select">উপজেলা:</label>
+                    <select id="upazila-select" disabled autocomplete="off">
+                        <option value="">উপজেলা নির্বাচন করুন</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="class-select">শ্রেণী:</label>
+                    <select id="class-select" autocomplete="off">
+                        <option value="">সব শ্রেণী</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="gender-select">কৃষকের জেন্ডার:</label>
+                    <select id="gender-select" autocomplete="off">
+                        <option value="">সব</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="education-select">শিক্ষাগত যোগ্যতা:</label>
+                    <select id="education-select" autocomplete="off">
+                        <option value="">সব</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="smartphone-select">স্মার্ট ফোন ব্যবহারকারী:</label>
+                    <select id="smartphone-select" autocomplete="off">
+                        <option value="">সব</option>
+                        <option value="হ্যাঁ">হ্যাঁ</option>
+                        <option value="না">না</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="search-input">অনুসন্ধান:</label>
+                    <input type="text" id="search-input" placeholder="নাম/উপজেলা/জেলা/গ্রাম" autocomplete="off">
+                </div>
+                <div class="filter-group land-amount-group">
+                    <label for="land-amount-input">মোট জমির পরিমাণ:</label>
+                    <input type="number" id="land-amount-input" placeholder="জমির পরিমাণ" step="0.01" min="0"
+                        autocomplete="off">
+                </div>
+                <div class="filter-group">
+                    <label for="land-operator-select">জমির তুলনা:</label>
+                    <select id="land-operator-select" autocomplete="off">
+                        <option value="">নির্বাচন করুন</option>
+                        <option value="greater">এর চেয়ে বেশি</option>
+                        <option value="equal">সমান</option>
+                        <option value="less">এর চেয়ে কম</option>
+                    </select>
+                </div>
+                <div class="filter-group" style="min-width: auto; max-width: none; flex: 0 0 auto;">
+                    <label style="opacity: 0;">&nbsp;</label>
+                    <button class="btn-search" id="search-btn">অনুসন্ধান</button>
+                </div>
+                <div class="filter-group" style="min-width: auto; max-width: none; flex: 0 0 auto;">
+                    <label style="opacity: 0;">&nbsp;</label>
+                    <button class="clear-filters-btn" id="clear-filters-btn" title="সব ফিল্টার সাফ করুন">
+                        <span>↻</span> সব ফিল্টার সাফ করুন
+                    </button>
+                </div>
+                <div class="filter-group" style="min-width: auto; max-width: none; flex: 0 0 auto;">
+                    <label style="opacity: 0;">&nbsp;</label>
+                    <button class="btn-search" id="go-analysis-btn" style="background: #8e44ad;">
+                        Go Analysis
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="main-content">
+            <div class="table-container">
+                <div class="table-header">
+                    <h2>কৃষক তালিকা (Farmer List)</h2>
+                    <div class="farmer-count">মোট কৃষক: <span id="total-farmers">0</span></div>
+                </div>
+                <div class="table-wrapper">
+                    <table id="farmer-table">
+                        <thead>
+                            <tr>
+                                <th>ক্রমিক</th>
+                                <th>IMG</th>
+                                <th>কৃষকের নাম</th>
+                                <th>পিতার নাম</th>
+                                <th>Class</th>
+                                <th>কৃষক পরিচিতি নং</th>
+                                <th>মোট জমি</th>
+                                <th>See Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="farmer-tbody">
+                            <tr>
+                                <td colspan="8" style="text-align: center; padding: 20px;">Loading...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="pagination" id="pagination">
+                    <button id="prev-page" disabled>Previous</button>
+                    <span class="page-info">Page <span id="current-page">1</span> of <span
+                            id="total-pages">1</span></span>
+                    <button id="next-page" disabled>Next</button>
+                </div>
+            </div>
+            <div class="map-container">
+                <div class="map-header" id="map-header">বাংলাদেশ</div>
+                <div class="map-wrapper">
+                    <div id="map"></div>
+                    <!-- Map Compass -->
+                    <div class="map-compass">
+                        <div class="compass-inner">
+                            <span class="north">N</span>
+                            <span class="south">S</span>
+                            <span class="east">E</span>
+                            <span class="west">W</span>
+                            <div class="compass-star">
+                                <svg viewBox="0 0 100 100" class="star-svg">
+                                    <!-- Central Cross -->
+                                    <path d="M50 5 L55 45 L95 50 L55 55 L50 95 L45 55 L5 50 L45 45 Z" />
+                                    <!-- Inner shading for 3D look -->
+                                    <path d="M50 5 L50 50 L95 50 Z" style="fill:rgba(0,0,0,0.2)" />
+                                    <path d="M50 95 L50 50 L5 50 Z" style="fill:rgba(0,0,0,0.2)" />
+                                    <!-- Red Highlight for North -->
+                                    <path d="M50 5 L55 45 L50 45 Z" class="star-north-red" />
+                                    <path d="M50 5 L45 45 L50 45 Z" class="star-north-red" style="opacity:0.8" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Gradient Legend Bar -->
+                    <div id="gradient-legend" class="gradient-legend" style="display: none;">
+                        <div class="legend-max" id="legend-max">0</div>
+                        <div class="legend-bar"></div>
+                        <div class="legend-min" id="legend-min">0</div>
+                        <div class="legend-title">কৃষক সংখ্যা</div>
+                    </div>
+                    <!-- See Number Button -->
+                    <div class="stats-btn-container">
+                        <button class="stats-btn" id="toggle-stats-btn" title="সংখ্যা দেখুন">সংখ্যা দেখুন</button>
+                    </div>
+                    <!-- Map Back Button -->
+                    <div class="map-back-btn-container" id="map-back-container" style="display: none;">
+                        <button class="back-btn" id="map-back-btn" title="পিছনে যান (Back)">
+                            <i class="fas fa-arrow-left">←</i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="field-force-container">
+                <div class="field-force-header">
+                    <div class="ff-header-top">
+                        <span>ফিল্ড ফোর্স</span>
+                        <span class="field-force-count" id="field-force-count">0</span>
+                    </div>
+                    <select id="field-business-select" class="business-selector">
+                        <option value="F">ACI Fertilizer (F)</option>
+                        <option value="A">CCPH (A)</option>
+                        <option value="H">Animal Health (H)</option>
+                        <option value="3">ACI Animal Genetics (3)</option>
+                    </select>
+                </div>
+                <div class="field-force-list" id="field-force-list">
+                    <div style="text-align: center; padding: 20px; color: #7f8c8d;">No data</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for farmer details -->
+    <div id="farmer-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>কৃষক বিস্তারিত তথ্য (Farmer Details)</h2>
+                <span class="close" id="close-modal">&times;</span>
+            </div>
+            <div id="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // Initialize map centered on Bangladesh
+        const map = L.map('map', {
+            zoomControl: false,
+            dragging: false,
+            touchZoom: false,
+            doubleClickZoom: false,
+            scrollWheelZoom: false,
+            boxZoom: false,
+            keyboard: false,
+            attributionControl: false
+        }).setView([23.6850, 90.3563], 7.8);
+
+        // Color palette
+        const baseColors = [
+            'rgba(255, 0, 0, 0.4)', 'rgba(0, 255, 0, 0.4)', 'rgba(255, 255, 0, 0.4)',
+            'rgba(0, 0, 255, 0.4)', 'rgba(255, 165, 0, 0.4)', 'rgba(135, 206, 250, 0.4)',
+            'rgba(255, 0, 255, 0.4)', 'rgba(255, 192, 203, 0.4)', 'rgba(255, 20, 147, 0.4)',
+            'rgba(0, 191, 255, 0.4)', 'rgba(50, 205, 50, 0.4)', 'rgba(255, 140, 0, 0.4)',
+            'rgba(186, 85, 211, 0.4)', 'rgba(255, 69, 0, 0.4)', 'rgba(0, 206, 209, 0.4)',
+            'rgba(255, 105, 180, 0.4)', 'rgba(30, 144, 255, 0.4)', 'rgba(255, 215, 0, 0.4)',
+            'rgba(220, 20, 60, 0.4)', 'rgba(0, 250, 154, 0.4)', 'rgba(72, 209, 204, 0.4)',
+            'rgba(255, 127, 80, 0.4)', 'rgba(138, 43, 226, 0.4)', 'rgba(255, 160, 122, 0.4)',
+            'rgba(32, 178, 170, 0.4)', 'rgba(255, 182, 193, 0.4)', 'rgba(70, 130, 180, 0.4)',
+            'rgba(255, 99, 71, 0.4)', 'rgba(60, 179, 113, 0.4)',
+        ];
+
+        const divisionColors = baseColors;
+        const districtColors = baseColors.map(c => c.replace('0.4', '0.5'));
+        const upazilaColors = baseColors.map(c => c.replace('0.4', '0.6'));
+
+        function assignColors(geojson, colorPalette) {
+            const colorMap = {};
+            const usedIndices = new Set();
+            const uniqueNames = [...new Set(geojson.features.map(f => f.properties.name_en))];
+
+            uniqueNames.forEach((name, index) => {
+                let hash = 0;
+                for (let i = 0; i < name.length; i++) {
+                    hash = ((hash << 5) - hash) + name.charCodeAt(i);
+                    hash = hash & hash;
+                }
+                let colorIndex = Math.abs(hash) % colorPalette.length;
+                let attempts = 0;
+                while (usedIndices.has(colorIndex) && attempts < colorPalette.length) {
+                    colorIndex = (colorIndex + 1) % colorPalette.length;
+                    attempts++;
+                }
+                if (usedIndices.has(colorIndex)) {
+                    colorIndex = index % colorPalette.length;
+                }
+                usedIndices.add(colorIndex);
+                colorMap[name] = colorPalette[colorIndex];
+            });
+            return colorMap;
+        }
+
+        let currentLayer = null;
+        let currentLayerType = null;
+        let lastLoadedLayerType = null;
+        let lastLoadedDistrict = null;
+        let selectedDivision = null;
+        let selectedDistrict = null;
+        let selectedUpazila = null;
+        let labelMarkers = [];
+        let currentGeoJSON = null;
+        let colorMap = {}; // Global color map for style persistence
+        let currentPage = 1;
+        let totalFarmers = 0;
+        let totalPages = 1;
+
+        // Load filter options
+        async function loadFilterOptions() {
+            try {
+                const response = await fetch('/api/filter-options/');
+                const data = await response.json();
+
+                // Load classes
+                const classSelect = document.getElementById('class-select');
+                data.classes.forEach(cls => {
+                    const option = document.createElement('option');
+                    option.value = cls;
+                    option.textContent = cls;
+                    classSelect.appendChild(option);
+                });
+
+                // Load genders
+                const genderSelect = document.getElementById('gender-select');
+                data.genders.forEach(gender => {
+                    const option = document.createElement('option');
+                    option.value = gender;
+                    option.textContent = gender;
+                    genderSelect.appendChild(option);
+                });
+
+                // Load education
+                const educationSelect = document.getElementById('education-select');
+                data.education.forEach(edu => {
+                    const option = document.createElement('option');
+                    option.value = edu;
+                    option.textContent = edu;
+                    educationSelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading filter options:', error);
+            }
+        }
+
+        // Load farmers
+        async function loadFarmers(page = 1) {
+            const tbody = document.getElementById('farmer-tbody');
+            // Add a subtle fade to indicate loading without clearing
+            tbody.style.opacity = '0.5';
+
+            const params = new URLSearchParams();
+            if (selectedDivision) params.append('division', selectedDivision);
+            if (selectedDistrict) params.append('district', selectedDistrict);
+            if (selectedUpazila) params.append('upazila', selectedUpazila);
+
+            const classFilter = document.getElementById('class-select').value;
+            const genderFilter = document.getElementById('gender-select').value;
+            const educationFilter = document.getElementById('education-select').value;
+            const smartphoneFilter = document.getElementById('smartphone-select').value;
+            const searchQuery = document.getElementById('search-input').value.trim();
+            const landOperator = document.getElementById('land-operator-select').value;
+            const landAmount = document.getElementById('land-amount-input').value.trim();
+
+            if (classFilter) params.append('class', classFilter);
+            if (genderFilter) params.append('gender', genderFilter);
+            if (educationFilter) params.append('education', educationFilter);
+            if (smartphoneFilter) params.append('smart_phone', smartphoneFilter);
+            if (searchQuery) params.append('search', searchQuery);
+            if (landOperator) params.append('land_operator', landOperator);
+            if (landAmount) params.append('land_amount', landAmount);
+
+            params.append('page', page);
+            params.append('limit', 50);
+
+            try {
+                const response = await fetch(`/api/farmers/?${params.toString()}`);
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                tbody.style.opacity = '1';
+
+                if (data.error) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: red;">${data.error}</td></tr>`;
+                    return;
+                }
+
+                totalFarmers = data.total_farmers || 0;
+                totalPages = data.total_pages || 1;
+                currentPage = page;
+
+                document.getElementById('total-farmers').textContent = totalFarmers;
+                document.getElementById('current-page').textContent = currentPage;
+                document.getElementById('total-pages').textContent = totalPages;
+
+                // Refresh Dynamic Filter Dropdowns (Education and Class)
+                refreshDynamicFilters(data.dynamic_education, data.dynamic_classes);
+
+                document.getElementById('prev-page').disabled = currentPage === 1;
+                document.getElementById('next-page').disabled = currentPage >= totalPages;
+
+                // Build new content in memory
+                const fragment = document.createDocumentFragment();
+                if (!data.farmers || data.farmers.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = '<td colspan="8" style="text-align: center; padding: 20px;">No farmers found</td></tr>';
+                    fragment.appendChild(row);
+                } else {
+                    data.farmers.forEach((farmer, index) => {
+                        const row = document.createElement('tr');
+                        const farmerData = encodeURIComponent(JSON.stringify(farmer));
+                        const serialNo = (currentPage - 1) * 50 + index + 1;
+                        row.innerHTML = `
+                            <td>${serialNo}</td>
+                            <td><img src="${farmer.IMG || 'http://krishi.gov.bd/assets/images/farmers_card/pro-pic.png'}" alt="Farmer" class="farmer-img" onerror="this.src='http://krishi.gov.bd/assets/images/farmers_card/pro-pic.png'"></td>
+                            <td>${farmer['কৃষকের নাম'] || ''}</td>
+                            <td>${farmer['পিতার নাম'] || ''}</td>
+                            <td>${farmer.Class || ''}</td>
+                            <td>${farmer['কৃষক পরিচিতি নং'] || ''}</td>
+                            <td>${farmer['মোট জমি'] || ''}</td>
+                            <td><button class="btn-details" data-farmer='${farmerData}'>See Details</button></td>
+                        `;
+                        const btn = row.querySelector('.btn-details');
+                        btn.addEventListener('click', function () {
+                            const farmerData = JSON.parse(decodeURIComponent(this.getAttribute('data-farmer')));
+                            showFarmerDetails(farmerData);
+                        });
+                        fragment.appendChild(row);
+                    });
+                }
+
+                // SWAP CONTENT
+                tbody.innerHTML = '';
+                tbody.appendChild(fragment);
+
+            } catch (error) {
+                console.error('Error loading farmers:', error);
+                tbody.style.opacity = '1';
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 20px; color: red;">Error loading farmers: ${error.message}</td></tr>`;
+            }
+        }
+
+        // Initialize reverse lookup logic
+        let districtMap = {};
+        let upazilaMap = {};
+        let selectedFieldForceId = null; // Store selected force ID string
+        let lockedFieldForce = null;     // Store the actual force object when clicked
+
+        async function initLocationMaps() {
+            try {
+                // Fetch full lists to build reverse map
+                const [dRes, uRes] = await Promise.all([
+                    fetch('/api/districts/'),
+                    fetch('/api/upazilas/')
+                ]);
+                const dData = await dRes.json();
+                const uData = await uRes.json();
+
+                dData.districts.forEach(d => {
+                    districtMap[d.name_en.toLowerCase()] = {
+                        name: d.name_en,
+                        name_bn: d.name_bn || d.name_en, // Store BN name
+                        division: d.division_en
+                    };
+                });
+
+                uData.upazilas.forEach(u => {
+                    upazilaMap[u.name_en.toLowerCase()] = {
+                        name: u.name_en,
+                        name_bn: u.name_bn || u.name_en, // Store BN name
+                        district: u.district_en
+                    };
+                });
+            } catch (e) {
+                console.error("Error initializing location maps:", e);
+            }
+        }
+
+        // Fuzzy Matching Utilities
+        function levenshtein(a, b) {
+            if (a.length === 0) return b.length;
+            if (b.length === 0) return a.length;
+
+            var matrix = [];
+
+            // increment along the first column of each row
+            var i;
+            for (i = 0; i <= b.length; i++) {
+                matrix[i] = [i];
+            }
+
+            // increment each column in the first row
+            var j;
+            for (j = 0; j <= a.length; j++) {
+                matrix[0][j] = j;
+            }
+
+            // Fill in the rest of the matrix
+            for (i = 1; i <= b.length; i++) {
+                for (j = 1; j <= a.length; j++) {
+                    if (b.charAt(i - 1) == a.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, // substitution
+                            Math.min(matrix[i][j - 1] + 1, // insertion
+                                matrix[i - 1][j] + 1)); // deletion
+                    }
+                }
+            }
+
+            return matrix[b.length][a.length];
+        }
+
+        function findBestMatch(target, mapObject) {
+            if (!target) return null;
+
+            // Pre-process: lower and remove padding
+            let processedTarget = target.toLowerCase().trim();
+
+            // Handle "Town" or "Down" -> "Sadar"
+            processedTarget = processedTarget.replace(/\s*down\s*$/i, ' sadar').replace(/\s*town\s*$/i, ' sadar');
+
+            if (mapObject[processedTarget]) return mapObject[processedTarget];
+
+            // Space-insensitive exact match
+            const targetNoSpace = processedTarget.replace(/\s+/g, '');
+            for (const key in mapObject) {
+                if (key.replace(/\s+/g, '') === targetNoSpace) return mapObject[key];
+            }
+
+            let bestKey = null;
+            let minDistance = Infinity;
+            // Tighten threshold: approx 25% of length, minimum 1
+            const threshold = Math.max(1, Math.floor(target.length * 0.25));
+
+            for (const key in mapObject) {
+                // Compare without spaces for better robust matching
+                const distance = levenshtein(targetNoSpace, key.replace(/\s+/g, ''));
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    bestKey = key;
+                }
+            }
+
+            if (minDistance <= threshold && bestKey) {
+                return mapObject[bestKey];
+            }
+            return null;
+        }
+
+        async function applyReverseFilter(force) {
+            if (!force || !force.base) return;
+            // Use fuzzy logic to find the canonical object if possible
+            let matchedObj = findBestMatch(force.base, upazilaMap);
+            if (!matchedObj) matchedObj = findBestMatch(force.base, districtMap);
+
+            // Set singleton selection and lock the object to prevent vanishing
+            lockedFieldForce = force;
+            selectedFieldForceId = (force.name + "_" + force.base).trim().toLowerCase();
+
+            if (matchedObj) {
+                if (matchedObj.district) {
+                    // Upazila match
+                    const u = matchedObj;
+                    // Check if we can find parent district mapping
+                    const d = findBestMatch(u.district, districtMap); // Fuzzy match parent district too if needed
+                    // Actually districtMap keys are canonical english names, so u.district should be correct english if from upazilaMap
+                    const d_canonical = districtMap[u.district.toLowerCase()];
+
+                    if (d_canonical) {
+                        selectedDivision = d_canonical.division;
+                        selectedDistrict = u.district;
+                        selectedUpazila = u.name;
+                    }
+                } else if (matchedObj.division) {
+                    // District match
+                    const d = matchedObj;
+                    selectedDivision = d.division;
+                    selectedDistrict = d.name;
+                    selectedUpazila = null;
+                }
+            } else {
+                // Heuristic Fallback (Exact string match attempts if fuzzy failed or redundant)
+                // Existing logic already covered by fuzzy with distance 0, but good to keep safe?
+                // Actually fuzzy covers exact match too.
+                console.log("No location match found for base:", force.base);
+                // We could alert user or just do nothing (except filter list)
+            }
+
+            // Sync dropdowns
+            if (selectedDivision) {
+                document.getElementById('division-select').value = selectedDivision;
+                await loadDistricts(selectedDivision);
+                if (selectedDistrict) {
+                    document.getElementById('district-select').value = selectedDistrict;
+                    document.getElementById('district-select').disabled = false;
+                    await loadUpazilas(selectedDistrict);
+                    if (selectedUpazila) {
+                        document.getElementById('upazila-select').value = selectedUpazila;
+                        document.getElementById('upazila-select').disabled = false;
+                        isolateFeature(selectedUpazila);
+                        await loadLayer('upazilas', { division: selectedDivision, district: selectedDistrict });
+                    } else {
+                        isolateFeature(selectedDistrict);
+                        await loadLayer('upazilas', { division: selectedDivision, district: selectedDistrict });
+                    }
+                } else {
+                    isolateFeature(selectedDivision);
+                    await loadLayer('districts', { division: selectedDivision });
+                }
+            }
+
+            updateMapHeader();
+            loadFarmers(1);
+            loadFieldForces();
+        }
+
+        // Load Field Forces
+        async function loadFieldForces() {
+            const listContainer = document.getElementById('field-force-list');
+            const countSpan = document.getElementById('field-force-count');
+            const businessSelect = document.getElementById('field-business-select');
+            const business = businessSelect ? businessSelect.value : 'F';
+
+            // Subtle fade for loading feedback without clearing
+            listContainer.style.opacity = '0.5';
+
+            const params = new URLSearchParams();
+            if (selectedDivision) params.append('division', selectedDivision);
+            if (selectedDistrict) params.append('district', selectedDistrict);
+            if (selectedUpazila) params.append('upazila', selectedUpazila);
+            params.append('business', business);
+
+            try {
+                let forces = [];
+
+                if (selectedFieldForceId && lockedFieldForce) {
+                    forces = [lockedFieldForce];
+                } else {
+                    const response = await fetch(`/api/field-forces/?${params.toString()}`);
+                    if (!response.ok) {
+                        console.error(`Field Force API error: ${response.status}`);
+                        forces = [];
+                    } else {
+                        const data = await response.json();
+                        if (data.error) {
+                            console.error(`Field Force data error: ${data.error}`);
+                            forces = [];
+                        } else {
+                            forces = data.field_forces || [];
+                        }
+                    }
+                }
+
+                listContainer.style.opacity = '1';
+
+                const fragment = document.createDocumentFragment();
+                const count = forces.length;
+                countSpan.textContent = count;
+
+                if (count === 0) {
+                    const noData = document.createElement('div');
+                    noData.style.textAlign = 'center';
+                    noData.style.padding = '20px';
+                    noData.textContent = 'No field forces found';
+                    fragment.appendChild(noData);
+                } else {
+                    const table = document.createElement('table');
+                    table.className = 'ff-table';
+                    table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>ক্রমিক</th>
+                                <th>Name</th>
+                                <th>Area (অঞ্চল)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    `;
+                    const tbody = table.querySelector('tbody');
+
+                    forces.forEach((force, index) => {
+                        const tr = document.createElement('tr');
+                        const currentId = (force.name + "_" + force.base).trim().toLowerCase();
+                        if (selectedFieldForceId === currentId) {
+                            tr.classList.add('selected');
+                        }
+
+                        // Use findBestMatch for robust BN lookup
+                        let matchedObj = findBestMatch(force.base, upazilaMap);
+                        if (!matchedObj) matchedObj = findBestMatch(force.base, districtMap);
+
+                        let baseDisplay = matchedObj ? matchedObj.name_bn : (force.base || '');
+
+                        tr.innerHTML = `
+                            <td>${index + 1}</td>
+                            <td>${force.name}</td>
+                            <td>${baseDisplay}</td>
+                        `;
+
+                        tr.onclick = () => {
+                            applyReverseFilter(force);
+                        };
+                        tbody.appendChild(tr);
+                    });
+                    fragment.appendChild(table);
+                }
+
+                // SWAP CONTENT
+                listContainer.innerHTML = '';
+                listContainer.appendChild(fragment);
+
+            } catch (error) {
+                console.error('Error loading field forces:', error);
+                listContainer.style.opacity = '1';
+                listContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: red;">Error loading field forces</div>';
+                countSpan.textContent = '0';
+            }
+        }
+
+        // Show farmer details in modal
+        function showFarmerDetails(farmer) {
+            const modal = document.getElementById('farmer-modal');
+            const modalBody = document.getElementById('modal-body');
+
+            let html = `<img src="${farmer.IMG || 'http://krishi.gov.bd/assets/images/farmers_card/pro-pic.png'}" alt="Farmer" class="detail-img" onerror="this.src='http://krishi.gov.bd/assets/images/farmers_card/pro-pic.png'">`;
+            html += '<div class="detail-grid">';
+
+            const fields = [
+                'কৃষকের নাম', 'পিতার নাম', 'মাতার নাম', 'স্বামী/স্ত্রীর নাম',
+                'কৃষকের জেন্ডার', 'গ্রামের নাম', 'পাড়ার নাম', 'ব্লকের নাম',
+                'ইউনিয়ন/পৌরসভা', 'উপজেলা', 'জেলা', 'কৃষক পরিচিতি নং',
+                'কৃষক সহায়তা কার্ড নং', 'কৃষক পরিবার নম্বর', 'মোবাইল নম্বর',
+                'জাতীয় পরিচয়পত্র নং', 'জন্ম তারিখ', 'শিক্ষাগত যোগ্যতা',
+                'স্মার্ট ফোন ব্যবহারকারী', 'কৃষক সংগঠনের নাম', 'প্রাপ্ত প্রশিক্ষণ',
+                'কৃষি ব্যতিত আয়ের অন্য উৎস', 'মোট জমি', 'নিজ জমি', 'লিজ জমি',
+                'বর্গা জমি', 'ফসল-১', 'ফসল-২', 'ফসল-৩', 'ফসল-৪', 'Class'
+            ];
+
+            fields.forEach(field => {
+                const value = farmer[field] || '';
+                if (value) {
+                    html += `
+                        <div class="detail-item">
+                            <div class="detail-label">${field}:</div>
+                            <div class="detail-value">${value}</div>
+                        </div>
+                    `;
+                }
+            });
+
+            html += '</div>';
+            modalBody.innerHTML = html;
+            modal.style.display = 'block';
+        }
+
+        // Close modal
+        document.getElementById('close-modal').onclick = function () {
+            document.getElementById('farmer-modal').style.display = 'none';
+        };
+
+        window.onclick = function (event) {
+            const modal = document.getElementById('farmer-modal');
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+
+        // Pagination
+        document.getElementById('prev-page').onclick = () => {
+            if (currentPage > 1) {
+                loadFarmers(currentPage - 1);
+            }
+        };
+
+        document.getElementById('next-page').onclick = () => {
+            if (currentPage < totalPages) {
+                loadFarmers(currentPage + 1);
+            }
+        };
+
+        // Map functions (from original template)
+        async function loadDivisions() {
+            const select = document.getElementById('division-select');
+            select.innerHTML = '<option value="">সব বিভাগ</option>';
+
+            // Try cache first
+            const cached = sessionStorage.getItem('divisions_list');
+            if (cached) {
+                const divisions = JSON.parse(cached);
+                divisions.forEach(div => {
+                    const option = document.createElement('option');
+                    option.value = div.name_en;
+                    option.textContent = div.name_bn || div.name_en;
+                    select.appendChild(option);
+                });
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/divisions/');
+                const data = await response.json();
+                sessionStorage.setItem('divisions_list', JSON.stringify(data.divisions));
+                data.divisions.forEach(div => {
+                    const option = document.createElement('option');
+                    option.value = div.name_en;
+                    option.textContent = div.name_bn || div.name_en;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading divisions:', error);
+            }
+        }
+
+        async function loadDistricts(divisionName) {
+            const select = document.getElementById('district-select');
+            select.innerHTML = '<option value="">সব জেলা</option>';
+            select.disabled = !divisionName;
+            if (!divisionName) return;
+
+            const cacheKey = `districts_${divisionName}`;
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                const districts = JSON.parse(cached);
+                districts.forEach(dist => {
+                    const option = document.createElement('option');
+                    option.value = dist.name_en;
+                    option.textContent = dist.name_bn || dist.name_en;
+                    select.appendChild(option);
+                });
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/districts/?division=${encodeURIComponent(divisionName)}`);
+                const data = await response.json();
+                sessionStorage.setItem(cacheKey, JSON.stringify(data.districts));
+                data.districts.forEach(dist => {
+                    const option = document.createElement('option');
+                    option.value = dist.name_en;
+                    option.textContent = dist.name_bn || dist.name_en;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading districts:', error);
+            }
+        }
+
+        async function loadUpazilas(districtName) {
+            const select = document.getElementById('upazila-select');
+            select.innerHTML = '<option value="">সব উপজেলা</option>';
+            select.disabled = !districtName;
+            if (!districtName) return;
+
+            const cacheKey = `upazilas_${districtName}`;
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                const upazilas = JSON.parse(cached);
+                upazilas.forEach(upz => {
+                    const option = document.createElement('option');
+                    option.value = upz.name_en;
+                    option.textContent = upz.name_bn || upz.name_en;
+                    select.appendChild(option);
+                });
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/upazilas/?district=${encodeURIComponent(districtName)}`);
+                const data = await response.json();
+                sessionStorage.setItem(cacheKey, JSON.stringify(data.upazilas));
+                data.upazilas.forEach(upz => {
+                    const option = document.createElement('option');
+                    option.value = upz.name_en;
+                    option.textContent = upz.name_bn || upz.name_en;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading upazilas:', error);
+            }
+        }
+
+        function isolateFeature(nameEn) {
+            if (!currentLayer) return null;
+            let matchedBounds = null;
+            currentLayer.eachLayer(layer => {
+                const props = layer.feature.properties;
+                const nameEnLower = nameEn ? nameEn.toLowerCase() : null;
+                const matches = (props.name_en && nameEnLower && props.name_en.toLowerCase() === nameEnLower);
+
+                if (matches) {
+                    matchedBounds = layer.getBounds();
+                }
+
+                // NEW: Layer-aware isolation logic
+                if (currentLayerType === 'upazilas') {
+                    // PERSISTENCE MODE: Just highlight the selection, don't hide neighbors
+                    const isSelected = (nameEn && props.name_en && nameEn.toLowerCase() === props.name_en.toLowerCase());
+                    let fill = (isSelected || props.name_en === selectedUpazila) ? 'red' : (colorMap[props.name_en] || '#ccc');
+
+                    if (showStats && areaStats && !isSelected && props.name_en !== selectedUpazila) {
+                        fill = getGradientColor(props.name_en);
+                    }
+
+                    layer.setStyle({
+                        fillColor: fill,
+                        fillOpacity: (isSelected || props.name_en === selectedUpazila) ? 0.9 : (showStats ? 0.85 : 0.6),
+                        color: '#333',
+                        weight: 1.5,
+                        opacity: 0.8
+                    });
+
+                    // Always show labels in upazila layer
+                    labelMarkers.forEach(m => {
+                        if (m.options.featureName === props.name_en) {
+                            m.setOpacity(1);
+                        }
+                    });
+
+                } else {
+                    // ISOLATION MODE: Hide neighbors for Division/District drill-down
+                    if (!matches) {
+                        layer.setStyle({
+                            fillOpacity: 0,
+                            opacity: 0,
+                            weight: 0,
+                            fillColor: 'transparent',
+                            color: 'transparent'
+                        });
+                        labelMarkers.forEach(m => {
+                            if (m.options.featureName === props.name_en) m.setOpacity(0);
+                        });
+                    } else {
+                        layer.setStyle({
+                            fillColor: '#ff7777', // Light Red for Div/Dist selection
+                            fillOpacity: 0.8,
+                            weight: 2,
+                            color: '#e60000', // Slightly darker border
+                            opacity: 1
+                        });
+                        labelMarkers.forEach(m => {
+                            if (m.options.featureName === props.name_en) m.setOpacity(1);
+                        });
+                    }
+                }
+            });
+            return matchedBounds;
+        }
+
+        async function loadLayer(layerType, filters = {}) {
+            // Check if we already have this specific context loaded
+            const isSameContext = (layerType === lastLoadedLayerType &&
+                layerType === 'upazilas' &&
+                filters.district === lastLoadedDistrict);
+
+            if (isSameContext) {
+                // Just refresh labels and stats, dont reload entire GeoJSON
+                if (showStats) {
+                    await fetchAreaStats(layerType);
+                }
+                refreshMapLabels(layerType);
+                // Trigger visual update and re-zoom to selection
+                const selection = selectedUpazila || selectedDistrict || selectedDivision;
+                if (selection) {
+                    const bounds = isolateFeature(selection);
+                    // Do NOT zoom further if we're at the upazila level
+                    if (bounds && !selectedUpazila) {
+                        map.invalidateSize();
+                        map.fitBounds(bounds, { padding: [0, 0] });
+                    }
+                }
+                return;
+            }
+
+            let url = `/api/geojson/${layerType}/`;
+            const params = new URLSearchParams();
+            if (filters.division) params.append('division', filters.division);
+            if (filters.district) params.append('district', filters.district);
+            if (params.toString()) url += '?' + params.toString();
+
+            try {
+                const response = await fetch(url);
+                const geojson = await response.json();
+
+                // NEW: Fetch stats BEFORE styling if showStats is active
+                // This ensures polygons have correct colors during creation (no flicker)
+                if (showStats) {
+                    await fetchAreaStats(layerType);
+                }
+
+                const colorPalette = layerType === 'divisions' ? divisionColors :
+                    layerType === 'districts' ? districtColors : upazilaColors;
+                colorMap = assignColors(geojson, colorPalette);
+
+                if (layerType === 'upazilas' && selectedUpazila) {
+                    geojson.features.forEach(feature => {
+                        if (feature.properties.name_en === selectedUpazila) {
+                            colorMap[feature.properties.name_en] = 'rgba(255, 0, 0, 0.8)';
+                        }
+                    });
+                }
+
+                // Create next layer but don't add yet
+                const nextLayer = L.geoJSON(geojson, {
+                    style: function (feature) {
+                        const name = feature.properties.name_en;
+
+                        // Layer-aware selection check
+                        let isSelected = false;
+                        let selectionColor = 'red';
+                        if (layerType === 'upazilas' && selectedUpazila && name === selectedUpazila) {
+                            isSelected = true;
+                            selectionColor = 'red';
+                        } else if (layerType === 'districts' && selectedDistrict && name === selectedDistrict) {
+                            isSelected = true;
+                            selectionColor = '#ff7777';
+                        } else if (layerType === 'divisions' && selectedDivision && name === selectedDivision) {
+                            isSelected = true;
+                            selectionColor = '#ff7777';
+                        }
+
+                        // Determine fill color
+                        let fillColor = colorMap[name] || 'rgba(200, 200, 200, 0.5)';
+                        if (showStats && areaStats && !isSelected) {
+                            fillColor = getGradientColor(name);
+                        }
+
+                        return {
+                            fillColor: isSelected ? selectionColor : fillColor,
+                            fillOpacity: isSelected ? 0.9 : (showStats ? 0.85 : 0.6),
+                            color: isSelected && layerType !== 'upazilas' ? '#e60000' : '#333',
+                            weight: isSelected ? 2 : 1.5,
+                            opacity: 0.8
+                        };
+                    },
+                    onEachFeature: function (feature, layer) {
+                        layer.on({
+                            click: function (e) {
+                                L.DomEvent.stopPropagation(e);
+                                const name_en = feature.properties.name_en;
+
+                                // Visual feedback - isolate the clicked feature immediately
+                                isolateFeature(name_en);
+
+                                if (layerType === 'divisions') {
+                                    document.getElementById('division-select').value = name_en;
+                                    document.getElementById('division-select').dispatchEvent(new Event('change'));
+                                } else if (layerType === 'districts') {
+                                    document.getElementById('district-select').value = name_en;
+                                    document.getElementById('district-select').dispatchEvent(new Event('change'));
+                                } else if (layerType === 'upazilas') {
+                                    document.getElementById('upazila-select').value = name_en;
+                                    document.getElementById('upazila-select').dispatchEvent(new Event('change'));
+                                }
+                            }
+                        });
+                    }
+                });
+
+                // ADD NEW LAYER
+                nextLayer.addTo(map);
+
+                // REMOVE OLD LAYERS ONLY NOW
+                if (currentLayer) {
+                    map.removeLayer(currentLayer);
+                }
+                labelMarkers.forEach(marker => map.removeLayer(marker));
+                labelMarkers = [];
+
+                currentLayer = nextLayer;
+                currentGeoJSON = geojson;
+
+                // Update trackers
+                lastLoadedLayerType = layerType;
+                lastLoadedDistrict = (layerType === 'upazilas' ? (filters.district || null) : null);
+
+                if (geojson.features.length > 0) {
+                    map.invalidateSize();
+                    const bounds = currentLayer.getBounds();
+                    // Maximize zoom: remove padding to let the map fill the entire 35% panel
+                    map.fitBounds(bounds, { padding: [0, 0] });
+                }
+
+                currentLayerType = layerType;
+
+                // Show/Hide back button based on depth
+                const backBtn = document.getElementById('map-back-container');
+                if (selectedDivision || selectedDistrict || selectedUpazila) {
+                    backBtn.style.display = 'block';
+                } else {
+                    backBtn.style.display = 'none';
+                }
+
+                // Final refresh of labels (ensures stats are populated if active)
+                refreshMapLabels(layerType);
+            } catch (error) {
+                console.error('Error loading layer:', error);
+            }
+        }
+
+        function refreshMapLabels(layerType) {
+            // NEW: Update polygon styles if stats are enabled
+            if (currentLayer) {
+                currentLayer.eachLayer(layer => {
+                    if (layer.feature) {
+                        const props = layer.feature.properties;
+                        const name = props.name_en;
+
+                        // Layer-aware selection check
+                        let isSelected = false;
+                        let selectionColor = 'red';
+                        if (layerType === 'upazilas' && selectedUpazila && name === selectedUpazila) {
+                            isSelected = true;
+                            selectionColor = 'red';
+                        } else if (layerType === 'districts' && selectedDistrict && name === selectedDistrict) {
+                            isSelected = true;
+                            selectionColor = '#ff7777';
+                        } else if (layerType === 'divisions' && selectedDivision && name === selectedDivision) {
+                            isSelected = true;
+                            selectionColor = '#ff7777';
+                        }
+
+                        // Determine fill color
+                        let fillColor = colorMap[name] || 'rgba(200, 200, 200, 0.5)';
+                        if (showStats && areaStats && !isSelected) {
+                            fillColor = getGradientColor(name);
+                        }
+
+                        layer.setStyle({
+                            fillColor: isSelected ? selectionColor : fillColor,
+                            fillOpacity: isSelected ? 0.9 : (showStats ? 0.85 : 0.6),
+                            color: isSelected && layerType !== 'upazilas' ? '#e60000' : '#333',
+                            weight: isSelected ? 2 : 1.5,
+                            opacity: 0.8
+                        });
+                    }
+                });
+            }
+
+            // Clear existing markers
+            labelMarkers.forEach(m => map.removeLayer(m));
+            labelMarkers = [];
+
+            if (!currentGeoJSON) return;
+
+            currentGeoJSON.features.forEach(feature => {
+                const props = feature.properties;
+                const name = props.name_bn || props.name_en;
+                if (props.centroid && name) {
+                    let displayName = name;
+                    if (displayName.endsWith('সদর') && displayName.length > 3 && !displayName.includes(' ')) {
+                        displayName = displayName.slice(0, -3) + ' সদর';
+                    }
+
+                    // Add count if statistics are enabled
+                    let labelHtml = `<div class="leaflet-label">${displayName}</div>`;
+                    if (showStats && areaStats) {
+                        // Backend now ALWAYS returns stats keyed by English names (name_en)
+                        // for maximum reliability and to avoid Bengali encoding mismatches.
+                        const key = props.name_en;
+                        const count = areaStats[key] || 0;
+                        labelHtml = `<div class="leaflet-label">${displayName}<br/><span style="color: darkblue; font-size: 13px; font-weight: 900;">(${count})</span></div>`;
+                    }
+
+                    const textWidth = Math.max(displayName.length * 12, 120);
+                    const labelHeight = (showStats && areaStats) ? 45 : 25;
+                    const label = L.marker([props.centroid[1], props.centroid[0]], {
+                        icon: L.divIcon({
+                            className: 'label-icon',
+                            html: labelHtml,
+                            iconSize: [textWidth, labelHeight],
+                            iconAnchor: [textWidth / 2, labelHeight / 2]
+                        }),
+                        interactive: false,
+                        zIndexOffset: 2000,
+                        featureName: props.name_en
+                    });
+                    label.addTo(map);
+                    labelMarkers.push(label);
+                }
+            });
+        }
+
+        // Function to update map header with full hierarchy
+        function updateMapHeader() {
+            const mapHeader = document.getElementById('map-header');
+            let headerText = '';
+
+            if (selectedUpazila) {
+                // Show: Division, District, Upazila
+                const divisionSelect = document.getElementById('division-select');
+                const districtSelect = document.getElementById('district-select');
+                const upazilaSelect = document.getElementById('upazila-select');
+
+                const divisionOption = divisionSelect.options[divisionSelect.selectedIndex];
+                const districtOption = districtSelect.options[districtSelect.selectedIndex];
+                const upazilaOption = upazilaSelect.options[upazilaSelect.selectedIndex];
+
+                const divisionName = divisionOption.textContent || selectedDivision;
+                const districtName = districtOption.textContent || selectedDistrict;
+                const upazilaName = upazilaOption.textContent || selectedUpazila;
+
+                headerText = `${divisionName} বিভাগ, ${districtName} জেলা, ${upazilaName} উপজেলা`;
+            } else if (selectedDistrict) {
+                // Show: Division, District
+                const divisionSelect = document.getElementById('division-select');
+                const districtSelect = document.getElementById('district-select');
+
+                const divisionOption = divisionSelect.options[divisionSelect.selectedIndex];
+                const districtOption = districtSelect.options[districtSelect.selectedIndex];
+
+                const divisionName = divisionOption.textContent || selectedDivision;
+                const districtName = districtOption.textContent || selectedDistrict;
+
+                headerText = `${divisionName} বিভাগ, ${districtName} জেলা`;
+            } else if (selectedDivision) {
+                // Show: Division only
+                const divisionSelect = document.getElementById('division-select');
+                const divisionOption = divisionSelect.options[divisionSelect.selectedIndex];
+                const divisionName = divisionOption.textContent || selectedDivision;
+
+                headerText = `${divisionName} বিভাগ`;
+            } else {
+                headerText = 'বাংলাদেশ';
+            }
+
+            mapHeader.textContent = headerText;
+        }
+
+        async function goBack() {
+            if (selectedUpazila) {
+                selectedUpazila = null;
+                document.getElementById('upazila-select').value = '';
+                await loadLayer('upazilas', { division: selectedDivision, district: selectedDistrict });
+            } else if (selectedDistrict) {
+                selectedDistrict = null;
+                document.getElementById('district-select').value = '';
+                document.getElementById('upazila-select').innerHTML = '<option value="">সব উপজেলা</option>';
+                document.getElementById('upazila-select').disabled = true;
+                await loadLayer('districts', { division: selectedDivision });
+            } else if (selectedDivision) {
+                selectedDivision = null;
+                document.getElementById('division-select').value = '';
+                document.getElementById('district-select').innerHTML = '<option value="">সব জেলা</option>';
+                document.getElementById('district-select').disabled = true;
+                document.getElementById('upazila-select').innerHTML = '<option value="">সব উপজেলা</option>';
+                document.getElementById('upazila-select').disabled = true;
+                await loadLayer('divisions');
+            }
+            updateMapHeader();
+            loadFarmers(1);
+            loadFieldForces();
+        }
+
+        // Add event listener for Map Back Button
+        document.getElementById('map-back-btn').addEventListener('click', goBack);
+
+        // Global state for statistics
+        let showStats = false;
+        let areaStats = null;
+
+        // Gradient color helper: yellow (low) to green (high) using rank/percentile
+        let precomputedColors = {}; // Stores pre-computed gradient colors for each area
+        let gradientMinCount = 0;
+        let gradientMaxCount = 0;
+
+        function computeGradientColors() {
+            precomputedColors = {};
+            if (!areaStats) return;
+
+            // Separate zero and non-zero entries
+            const allEntries = Object.entries(areaStats).map(([name, count]) => ({ name, count }));
+            const nonZeroEntries = allEntries.filter(e => e.count > 0).sort((a, b) => a.count - b.count);
+            const zeroEntries = allEntries.filter(e => e.count === 0);
+
+            // 0 values are ALWAYS white
+            zeroEntries.forEach(e => {
+                precomputedColors[e.name] = 'rgba(255, 255, 255, 0.85)';
+            });
+
+            const n = nonZeroEntries.length;
+            if (n > 0) {
+                gradientMinCount = nonZeroEntries[0].count;
+                gradientMaxCount = nonZeroEntries[n - 1].count;
+
+                // Color spectrum from image (Low to High): 
+                // Light Lime -> Greenish Yellow -> Light Green -> Medium Green -> Deep Green -> Teal/Dark Green -> Dark Forest Green/Brown
+                const colors = [
+                    [238, 255, 128], // 0.0: Light Lime (Low)
+                    [173, 255, 47],  // 0.16: Greenish Yellow
+                    [144, 238, 144], // 0.33: Light Green
+                    [60, 179, 113],  // 0.5: Medium Green
+                    [0, 100, 0],     // 0.66: Deep Green
+                    [0, 64, 64],     // 0.83: Teal/Dark Green
+                    [43, 29, 14]     // 1.0: Dark Forest Green/Brown (High)
+                ];
+
+                function interpolate(ratio) {
+                    if (ratio <= 0) return colors[0];
+                    if (ratio >= 1) return colors[colors.length - 1];
+
+                    const segment = ratio * (colors.length - 1);
+                    const index = Math.floor(segment);
+                    const f = segment - index;
+
+                    const c1 = colors[index];
+                    const c2 = colors[index + 1];
+
+                    return [
+                        Math.round(c1[0] + f * (c2[0] - c1[0])),
+                        Math.round(c1[1] + f * (c2[1] - c1[1])),
+                        Math.round(c1[2] + f * (c2[2] - c1[2]))
+                    ];
+                }
+
+                nonZeroEntries.forEach((entry, index) => {
+                    const ratio = n > 1 ? index / (n - 1) : 0.5;
+                    const rgb = interpolate(ratio);
+                    precomputedColors[entry.name] = `rgba(${rgb[0]}, ${rgb[1]}, ${rgb[2]}, 0.85)`;
+                });
+            } else {
+                // If all are zero or no data
+                gradientMinCount = 0;
+                gradientMaxCount = 0;
+            }
+
+            // Update Legend labels if visible
+            const legendBar = document.getElementById('gradient-legend');
+            if (legendBar) {
+                document.getElementById('legend-max').textContent = (gradientMaxCount || 0).toLocaleString();
+                document.getElementById('legend-min').textContent = (gradientMinCount || 0).toLocaleString();
+            }
+        }
+
+        function getGradientColor(areaName) {
+            return precomputedColors[areaName] || 'rgba(255, 255, 180, 0.7)';
+        }
+
+        async function fetchAreaStats(layerType = null) {
+            const params = new URLSearchParams();
+            if (selectedDivision) params.append('division', selectedDivision);
+            if (selectedDistrict) params.append('district', selectedDistrict);
+
+            // Filters
+            const education = document.getElementById('education-select').value;
+            const className = document.getElementById('class-select').value;
+            const gender = document.getElementById('gender-select').value;
+            const smartphone = document.getElementById('smartphone-select').value;
+            const search = document.getElementById('search-input').value;
+            const landOp = document.getElementById('land-operator-select').value;
+            const landAmt = document.getElementById('land-amount-input').value;
+
+            if (education) params.append('education', education);
+            if (className) params.append('class', className);
+            if (gender) params.append('gender', gender);
+            if (smartphone) params.append('smart_phone', smartphone);
+            if (search) params.append('search', search);
+            if (landOp && landAmt) {
+                params.append('land_operator', landOp);
+                params.append('land_amount', landAmt);
+            }
+
+            // Group by what we are looking at
+            const targetType = layerType || currentLayerType;
+            const groupBy = targetType === 'divisions' ? 'Division' :
+                targetType === 'districts' ? 'District' : 'Upazila';
+            params.append('group_by', groupBy);
+
+            try {
+                const response = await fetch(`/api/area-stats/?${params.toString()}`);
+                areaStats = await response.json();
+                computeGradientColors(); // Pre-compute rank-based gradient colors
+            } catch (e) {
+                console.error("Error fetching stats:", e);
+                areaStats = {};
+            }
+        }
+
+        async function loadFilterOptions() {
+            const cacheKey = 'filter_options';
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                const data = JSON.parse(cached);
+                refreshDynamicFilters(data.education, data.classes);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/filter-options/');
+                const data = await response.json();
+                sessionStorage.setItem(cacheKey, JSON.stringify(data));
+                refreshDynamicFilters(data.education, data.classes);
+            } catch (error) {
+                console.error('Error loading filter options:', error);
+            }
+        }
+
+        function refreshDynamicFilters(educationOptions, classOptions) {
+            const eduSelect = document.getElementById('education-select');
+            const classSelect = document.getElementById('class-select');
+
+            const currentEdu = eduSelect.value;
+            const currentClass = classSelect.value;
+
+            // Update Education
+            eduSelect.innerHTML = '<option value="">সব</option>';
+            educationOptions.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt;
+                eduSelect.appendChild(option);
+            });
+            eduSelect.value = educationOptions.includes(currentEdu) ? currentEdu : "";
+
+            // Update Class
+            classSelect.innerHTML = '<option value="">সব শ্রেণী</option>';
+            classOptions.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt;
+                classSelect.appendChild(option);
+            });
+            classSelect.value = classOptions.includes(currentClass) ? currentClass : "";
+        }
+
+        // Event listeners
+        document.getElementById('division-select').addEventListener('change', async function (e) {
+            selectedFieldForceId = null; // Clear single selection
+            lockedFieldForce = null;
+            selectedDivision = e.target.value;
+            selectedDistrict = null;
+            selectedUpazila = null;
+            document.getElementById('district-select').value = '';
+            document.getElementById('upazila-select').value = '';
+            if (selectedDivision) {
+                isolateFeature(selectedDivision);
+                await loadDistricts(selectedDivision);
+                await loadLayer('districts', { division: selectedDivision });
+            } else {
+                document.getElementById('district-select').disabled = true;
+                document.getElementById('upazila-select').disabled = true;
+                await loadLayer('divisions');
+            }
+            updateMapHeader();
+            loadFarmers(1);
+            loadFieldForces();
+        });
+
+        document.getElementById('district-select').addEventListener('change', async function (e) {
+            selectedFieldForceId = null; // Clear single selection
+            lockedFieldForce = null;
+            selectedDistrict = e.target.value;
+            selectedUpazila = null;
+            document.getElementById('upazila-select').value = '';
+            if (selectedDistrict) {
+                isolateFeature(selectedDistrict);
+                await loadUpazilas(selectedDistrict);
+                await loadLayer('upazilas', { division: selectedDivision, district: selectedDistrict });
+            } else {
+                document.getElementById('upazila-select').disabled = true;
+                if (selectedDivision) {
+                    await loadLayer('districts', { division: selectedDivision });
+                }
+            }
+            updateMapHeader();
+            loadFarmers(1);
+            loadFieldForces();
+        });
+
+        document.getElementById('upazila-select').addEventListener('change', async function (e) {
+            selectedFieldForceId = null; // Clear single selection
+            lockedFieldForce = null;
+            selectedUpazila = e.target.value;
+            if (selectedUpazila) {
+                // Just highlight the selection without zooming in further
+                isolateFeature(selectedUpazila);
+            }
+            if (selectedDistrict) {
+                await loadLayer('upazilas', { division: selectedDivision, district: selectedDistrict });
+            }
+            updateMapHeader();
+            loadFarmers(1);
+            loadFieldForces();
+        });
+
+        // Unified Refresh Helper
+        async function refreshDashboard(page = 1) {
+            // Always refresh farmer list
+            await loadFarmers(page);
+
+            // Refresh counts on map polygons if toggled ON
+            if (showStats) {
+                await fetchAreaStats(currentLayerType);
+                if (currentLayerType) {
+                    refreshMapLabels(currentLayerType);
+                }
+            }
+        }
+
+        // Filter change listeners
+        ['class-select', 'gender-select', 'education-select', 'smartphone-select', 'land-operator-select'].forEach(id => {
+            document.getElementById(id).addEventListener('change', () => {
+                refreshDashboard(1);
+            });
+        });
+
+        // Field business change listener
+        document.getElementById('field-business-select').addEventListener('change', () => {
+            loadFieldForces();
+        });
+
+        // Land amount input - reload on Enter or blur
+        document.getElementById('land-amount-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                refreshDashboard(1);
+            }
+        });
+        document.getElementById('land-amount-input').addEventListener('blur', () => {
+            const landOperator = document.getElementById('land-operator-select').value;
+            const landAmount = document.getElementById('land-amount-input').value.trim();
+            if (landOperator && landAmount) {
+                refreshDashboard(1);
+            }
+        });
+
+        // Search button click
+        document.getElementById('search-btn').addEventListener('click', () => {
+            refreshDashboard(1);
+        });
+
+        // Search input Enter key
+        document.getElementById('search-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                refreshDashboard(1);
+            }
+        });
+
+        // Toggle Stats Button
+        document.getElementById('toggle-stats-btn').addEventListener('click', async function () {
+            showStats = !showStats;
+            this.classList.toggle('active', showStats);
+
+            const legendElem = document.getElementById('gradient-legend');
+            if (showStats) {
+                await fetchAreaStats(currentLayerType);
+                if (legendElem) legendElem.style.display = 'flex';
+            } else {
+                areaStats = null;
+                precomputedColors = {};
+                if (legendElem) legendElem.style.display = 'none';
+            }
+
+            // RELOAD the current layer to apply gradient colors to polygons
+            if (currentLayerType) {
+                const filters = {};
+                if (selectedDivision) filters.division = selectedDivision;
+                if (selectedDistrict) filters.district = selectedDistrict;
+                // Force reload by resetting the tracker
+                lastLoadedLayerType = null;
+                await loadLayer(currentLayerType, filters);
+            }
+        });
+
+        // Clear all filters button
+        document.getElementById('clear-filters-btn').addEventListener('click', async () => {
+            // Full Reset Logic
+            selectedFieldForceId = null;
+            lockedFieldForce = null;
+            selectedDivision = null;
+            selectedDistrict = null;
+            selectedUpazila = null;
+
+            // Clear dropdowns
+            document.getElementById('division-select').value = '';
+            document.getElementById('district-select').value = '';
+            document.getElementById('upazila-select').value = '';
+            document.getElementById('district-select').disabled = true;
+            document.getElementById('upazila-select').disabled = true;
+
+            document.getElementById('class-select').value = '';
+            document.getElementById('gender-select').value = '';
+            document.getElementById('education-select').value = '';
+            document.getElementById('smartphone-select').value = '';
+            document.getElementById('search-input').value = '';
+            document.getElementById('land-operator-select').value = '';
+            document.getElementById('land-amount-input').value = '';
+
+            // Reload everything as fresh
+            await loadLayer('divisions');
+            map.setView([23.6850, 90.3563], 7.8); // Reset map view to tighter default
+            updateMapHeader();
+
+            // Comprehensive refresh
+            await loadFarmers(1);
+            if (showStats) {
+                await fetchAreaStats();
+            }
+            loadFieldForces();
+        });
+
+        // Helper to get current state params
+        function getCurrentParams() {
+            const params = new URLSearchParams();
+            const division = document.getElementById('division-select').value;
+            const district = document.getElementById('district-select').value;
+            const upazila = document.getElementById('upazila-select').value;
+            const education = document.getElementById('education-select').value;
+            const className = document.getElementById('class-select').value;
+            const gender = document.getElementById('gender-select').value;
+            const smartphone = document.getElementById('smartphone-select').value;
+            const search = document.getElementById('search-input').value;
+            const landOp = document.getElementById('land-operator-select').value;
+            const landAmt = document.getElementById('land-amount-input').value;
+
+            if (division) params.append('division', division);
+            if (district) params.append('district', district);
+            if (upazila) params.append('upazila', upazila);
+            if (education) params.append('education', education);
+            if (className) params.append('class', className);
+            if (gender) params.append('gender', gender);
+            if (smartphone) params.append('smart_phone', smartphone);
+            if (search) params.append('search', search);
+            if (landOp) params.append('land_operator', landOp);
+            if (landAmt) params.append('land_amount', landAmt);
+
+            if (currentPage > 1) params.append('page', currentPage);
+            if (showStats) params.append('show_stats', 'true');
+
+            return params;
+        }
+
+        // Go Analysis button click
+        document.getElementById('go-analysis-btn').addEventListener('click', () => {
+            const params = getCurrentParams();
+            const url = `/analytics/?${params.toString()}`;
+            window.location.href = url;
+        });
+
+        // Parse URL params to restore state (for Back button support)
+        async function initFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const division = params.get('division');
+            const district = params.get('district');
+            const upazila = params.get('upazila');
+            const education = params.get('education');
+            const className = params.get('class');
+            const gender = params.get('gender');
+            const smartphone = params.get('smart_phone');
+            const search = params.get('search');
+            const landOp = params.get('land_operator');
+            const landAmt = params.get('land_amount');
+            const page = params.get('page');
+            const showStatsParam = params.get('show_stats');
+
+            // Set UI values first (Synchronous part)
+            if (education) document.getElementById('education-select').value = education;
+            if (className) document.getElementById('class-select').value = className;
+            if (gender) document.getElementById('gender-select').value = gender;
+            if (smartphone) document.getElementById('smartphone-select').value = smartphone;
+            if (search) document.getElementById('search-input').value = search;
+            if (landOp) document.getElementById('land-operator-select').value = landOp;
+            if (landAmt) document.getElementById('land-amount-input').value = landAmt;
+
+            if (showStatsParam === 'true') {
+                showStats = true;
+                const btn = document.getElementById('toggle-stats-btn');
+                if (btn) {
+                    btn.classList.add('active');
+                    btn.textContent = 'সংখ্যা লুকান';
+                }
+            }
+
+            // Depth optimization: Determine only the exactly required layer and load hierarchy in parallel
+            if (division) {
+                document.getElementById('division-select').value = division;
+                selectedDivision = division;
+
+                const loaders = [loadDistricts(division)];
+                if (district) {
+                    document.getElementById('district-select').value = district;
+                    selectedDistrict = district;
+                    loaders.push(loadUpazilas(district));
+                    if (upazila) {
+                        document.getElementById('upazila-select').value = upazila;
+                        selectedUpazila = upazila;
+                    }
+                }
+
+                // Fetch required data in parallel
+                await Promise.all(loaders);
+
+                // Load the deep layer immediately
+                if (district) {
+                    await loadLayer('upazilas', { division, district });
+                    if (upazila) isolateFeature(upazila);
+                } else {
+                    await loadLayer('districts', { division });
+                }
+            } else {
+                await loadLayer('divisions');
+            }
+
+            updateMapHeader();
+
+            // Kick off dashboard and field force in parallel
+            await Promise.resolve().then(() => {
+                refreshDashboard(page ? parseInt(page) : 1);
+                loadFieldForces();
+            });
+        }
+
+        // Initialize
+        async function init() {
+            // Start everything in parallel for maximum speed
+            const p1 = loadDivisions();
+            const p2 = loadFilterOptions();
+            const p3 = initLocationMaps();
+
+            await Promise.all([p1, p2, p3]);
+
+            // Check if we have URL params, otherwise default load
+            if (window.location.search && window.location.search.length > 1) {
+                await initFromURL();
+            } else {
+                // EXPLICIT RESET to prevent browser auto-fill/persistence issues
+                selectedDivision = null;
+                selectedDistrict = null;
+                selectedUpazila = null;
+
+                document.getElementById('division-select').value = '';
+                document.getElementById('district-select').value = '';
+                document.getElementById('upazila-select').value = '';
+                document.getElementById('district-select').disabled = true;
+                document.getElementById('upazila-select').disabled = true;
+
+                // Clear other filters
+                document.querySelectorAll('.filters select:not(#division-select):not(#district-select):not(#upazila-select), .filters input').forEach(el => el.value = '');
+
+                await loadLayer('divisions');
+                map.setView([23.6850, 90.3563], 7.8); // Reset map view to tighter default
+                updateMapHeader();
+                refreshDashboard(1);
+                loadFieldForces();
+            }
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

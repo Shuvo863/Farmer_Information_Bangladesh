@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="bn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>বিশ্লেষণ উইন্ডো</title>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', 'Noto Sans Bengali', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            flex-shrink: 0;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 15px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            flex-wrap: nowrap;
+            align-items: flex-end;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 120px;
+            max-width: 150px;
+            flex: 1;
+        }
+
+        .filter-group label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #ecf0f1;
+        }
+
+        .filter-group select,
+        .filter-group input[type="text"],
+        .filter-group input {
+            height: 42px;
+            padding: 8px 12px;
+            border: 1px solid #dcdde1;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        .land-amount-group {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 10px;
+            min-width: 250px;
+            max-width: 300px;
+            flex: 0 0 auto;
+        }
+
+        .land-amount-group label {
+            margin-bottom: 0;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .land-amount-group input {
+            height: 42px;
+            padding: 8px 12px;
+            border: 1px solid #dcdde1;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+            flex: 1;
+            min-width: 150px;
+        }
+
+        .clear-filters-btn {
+            height: 42px;
+            padding: 0 15px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .clear-filters-btn:hover {
+            background-color: #c0392b;
+            transform: translateY(-1px);
+        }
+
+        .btn-search {
+            height: 42px;
+            padding: 0 20px;
+            background: #27ae60;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: bold;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-search:hover {
+            background: #229954;
+            transform: translateY(-1px);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 12px;
+            background-color: #f0f2f5;
+            display: grid;
+            /* 3 equal columns per row. The first chart-card can span 2 columns to hold 3 small summary boxes */
+            grid-template-columns: repeat(3, 1fr);
+            /* reduce row height so more analysis cards fit without page scroll */
+            grid-auto-rows: 420px;
+            gap: 12px;
+            overflow-y: auto;
+        }
+
+        .chart-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            padding: 12px; /* reduce vertical padding to lower overall card height */
+            display: flex;
+            flex-direction: column;
+            min-height: 300px; /* slightly smaller card height so more cards are visible */
+        }
+
+        /* Allow a chart-card to span two columns when needed */
+        .chart-card.span-2 { grid-column: span 2; }
+
+        .summary-grid { display:flex; gap: 12px; width: 100%; }
+        .summary-grid .summary-box { flex: 1; padding: 12px 16px; border-radius: 8px; background: #fbfcfd; }
+        .summary-box.small .value { font-size: 28px; }
+
+        /* Numeric summary boxes (big number in card) */
+        .summary-box {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .summary-box .headline {
+            font-size: 18px;
+            color: #7f8c8d;
+        }
+
+        .summary-box .value {
+            font-size: 52px;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+
+        .legend-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+            cursor: pointer;
+        }
+
+        .legend-checkbox .swatch {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.06) inset;
+        }
+
+        .legend-checkbox span {
+            font-size: 15px;
+            line-height: 1.1;
+        }
+
+        .legend-container {
+            margin-top: 8px;
+            /* fit inside card - allow internal scrolling if content is long */
+            max-height: calc(100% - 60px);
+            overflow-y: auto;
+        }
+
+        .chart-card h2 {
+            font-size: 22px;
+            margin-bottom: 15px;
+            color: #2c3e50;
+            border-left: 4px solid #3498db;
+            padding-left: 10px;
+        }
+
+        .chart-container {
+            position: relative;
+            flex: 1;
+            min-height: 0;
+            /* Lay out legend and canvas side-by-side: legend at left, pie at right */
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            justify-content: center; /* center canvas in remaining space */
+            overflow: hidden; /* prevent chart drawing outside the card */
+        }
+
+        /* Make legend column fixed width and let canvas grow */
+        .chart-container .legend-container {
+            width: 180px; /* narrower legend column so chart fits and no horizontal scroll */
+            flex: 0 0 180px;
+        }
+
+        /* Specific tweaks for education legend to reduce need for scrolling */
+        #educationLegend {
+            /* Keep education legend contained within card; internal scrolling if needed */
+            max-height: calc(100% - 60px);
+            overflow-y: auto;
+            width: 180px;
+        }
+
+        .chart-container canvas {
+            flex: 1 1 auto;
+            width: 100% !important;
+            height: auto !important;
+            max-width: 100%;
+            max-height: 420px; /* keep canvas within card height */
+            margin: 0 auto;
+            display: block;
+        }
+
+        /* On narrow screens, stack vertically */
+        @media (max-width: 900px) {
+            .chart-container { flex-direction: column-reverse; }
+            .chart-container .legend-container { width: 100%; flex: none; }
+        }
+    </style>
+    <!-- Include Chart.js and DataLabels Plugin -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+</head>
+
+<body>
+    <div class="header">
+        <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+            <button id="back-btn" style="
+                background: none; 
+                border: none; 
+                color: white; 
+                font-size: 24px; 
+                cursor: pointer; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center;
+                padding: 5px;
+                border-radius: 50%;
+                transition: background 0.2s;
+            ">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+            </button>
+            <h1 style="margin-bottom: 0;">বিশ্লেষণ উইন্ডো</h1>
+        </div>
+        <div class="filters">
+            <div class="filter-group">
+                <label for="division-select">বিভাগ:</label>
+                <select id="division-select" autocomplete="off">
+                    <option value="">সব বিভাগ</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="district-select">জেলা:</label>
+                <select id="district-select" disabled autocomplete="off">
+                    <option value="">জেলা নির্বাচন করুন</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="upazila-select">উপজেলা:</label>
+                <select id="upazila-select" disabled autocomplete="off">
+                    <option value="">উপজেলা নির্বাচন করুন</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="class-select">শ্রেণী:</label>
+                <select id="class-select" autocomplete="off">
+                    <option value="">সব শ্রেণী</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="gender-select">কৃষকের জেন্ডার:</label>
+                <select id="gender-select" autocomplete="off">
+                    <option value="">সব</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="education-select">শিক্ষাগত যোগ্যতা:</label>
+                <select id="education-select" autocomplete="off">
+                    <option value="">সব</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="smartphone-select">স্মার্ট ফোন ব্যবহারকারী:</label>
+                <select id="smartphone-select" autocomplete="off">
+                    <option value="">সব</option>
+                    <option value="হ্যাঁ">হ্যাঁ</option>
+                    <option value="না">না</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="search-input">অনুসন্ধান:</label>
+                <input type="text" id="search-input" placeholder="নাম/উপজেলা/জেলা/গ্রাম" autocomplete="off">
+            </div>
+            <div class="filter-group land-amount-group">
+                <label for="land-amount-input">মোট জমির পরিমাণ:</label>
+                <input type="number" id="land-amount-input" placeholder="জমির পরিমাণ" step="0.01" min="0"
+                    autocomplete="off">
+            </div>
+            <div class="filter-group">
+                <label for="land-operator-select">জমির তুলনা:</label>
+                <select id="land-operator-select" autocomplete="off">
+                    <option value="">নির্বাচন করুন</option>
+                    <option value="greater">এর চেয়ে বেশি</option>
+                    <option value="equal">সমান</option>
+                    <option value="less">এর চেয়ে কম</option>
+                </select>
+            </div>
+            <div class="filter-group" style="min-width: auto; max-width: none; flex: 0 0 auto;">
+                <label style="opacity: 0;">&nbsp;</label>
+                <button class="btn-search" id="search-btn">অনুসন্ধান</button>
+            </div>
+            <div class="filter-group" style="min-width: auto; max-width: none; flex: 0 0 auto;">
+                <label style="opacity: 0;">&nbsp;</label>
+                <button class="clear-filters-btn" id="clear-filters-btn" title="সব ফিল্টার সাফ করুন">
+                    <span>↻</span> সব ফিল্টার সাফ করুন
+                </button>
+            </div>
+            <div class="filter-group" style="min-width: auto; max-width: none; flex: 0 0 auto;">
+                <label style="opacity: 0;">&nbsp;</label>
+                <button class="btn-search" id="go-analysis-btn" style="background: #8e44ad;">
+                    বিশ্লেষণ দেখুন
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="main-content">
+        <!-- Row 1: left card spans 2 columns and holds three small numeric boxes; right column holds population cover -->
+        <div class="chart-card span-2">
+            <div class="summary-grid">
+                <div class="summary-box small">
+                    <div class="headline">মোট কৃষক সংখ্যা</div>
+                    <div id="totalFarmersBox" class="value">--</div>
+                
+                </div>
+                <div class="summary-box small">
+                    <div class="headline">কৃষক পরিচিতি নং আছে কিনা?</div>
+                    <div id="farmerIdBox" class="value">--</div>
+                
+                </div>
+                <div class="summary-box small">
+                    <div class="headline">জাতীয় পরিচয়পত্র আছে কিনা?</div>
+                    <div id="nidBox" class="value">--</div>
+                
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2>জনসংখ্যা কভার</h2>
+            <div class="chart-container">
+                <canvas id="populationCoverChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Row 2: Class, Education, Gender -->
+        <div class="chart-card">
+            <h2>কৃষক শ্রেণী</h2>
+            <div class="chart-container">
+                <div class="legend-container" id="classLegend"></div>
+                <canvas id="classDistributionChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2>শিক্ষা</h2>
+            <div class="chart-container">
+                <div class="legend-container" id="educationLegend"></div>
+                <canvas id="educationChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2>জেন্ডার বণ্টন</h2>
+            <div class="chart-container">
+                <div class="legend-container" id="genderLegend"></div>
+                <canvas id="genderDistributionChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Row 3: Land distribution (percent), Smartphone, Amount-of-Land bins -->
+        <div class="chart-card">
+            <h2>জমির বণ্টন (শতক)</h2>
+            <div class="chart-container">
+                <div class="legend-container" id="landLegend"></div>
+                <canvas id="landDistributionChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2>স্মার্টফোন ব্যবহারকারী</h2>
+            <div class="chart-container">
+                <div class="legend-container" id="smartphoneLegend"></div>
+                <canvas id="smartphoneChart"></canvas>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h2>জমির পরিমাণ বণ্টন</h2>
+            <div class="chart-container">
+                <canvas id="landAmountBinsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function loadFilterOptions() {
+            const cacheKey = 'filter_options';
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                const data = JSON.parse(cached);
+                refreshDynamicFilters(data.education, data.classes);
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/filter-options/');
+                const data = await response.json();
+                sessionStorage.setItem(cacheKey, JSON.stringify(data));
+                refreshDynamicFilters(data.education, data.classes);
+            } catch (error) {
+                console.error('Error loading filter options:', error);
+            }
+        }
+
+        async function loadDivisions() {
+            const select = document.getElementById('division-select');
+            select.innerHTML = '<option value="">সব বিভাগ</option>';
+
+            const cached = sessionStorage.getItem('divisions_list');
+            if (cached) {
+                const divisions = JSON.parse(cached);
+                divisions.forEach(div => {
+                    const option = document.createElement('option');
+                    option.value = div.name_en;
+                    option.textContent = div.name_bn || div.name_en;
+                    select.appendChild(option);
+                });
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/divisions/');
+                const data = await response.json();
+                sessionStorage.setItem('divisions_list', JSON.stringify(data.divisions));
+                data.divisions.forEach(div => {
+                    const option = document.createElement('option');
+                    option.value = div.name_en;
+                    option.textContent = div.name_bn || div.name_en;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading divisions:', error);
+            }
+        }
+
+        async function loadDistricts(divisionName) {
+            const select = document.getElementById('district-select');
+            select.innerHTML = '<option value="">সব জেলা</option>';
+            select.disabled = !divisionName;
+            if (!divisionName) return;
+
+            const cacheKey = `districts_${divisionName}`;
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                const districts = JSON.parse(cached);
+                districts.forEach(dist => {
+                    const option = document.createElement('option');
+                    option.value = dist.name_en;
+                    option.textContent = dist.name_bn || dist.name_en;
+                    select.appendChild(option);
+                });
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/districts/?division=${encodeURIComponent(divisionName)}`);
+                const data = await response.json();
+                sessionStorage.setItem(cacheKey, JSON.stringify(data.districts));
+                data.districts.forEach(dist => {
+                    const option = document.createElement('option');
+                    option.value = dist.name_en;
+                    option.textContent = dist.name_bn || dist.name_en;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading districts:', error);
+            }
+        }
+
+        async function loadUpazilas(districtName) {
+            const select = document.getElementById('upazila-select');
+            select.innerHTML = '<option value="">সব উপজেলা</option>';
+            select.disabled = !districtName;
+            if (!districtName) return;
+
+            const cacheKey = `upazilas_${districtName}`;
+            const cached = sessionStorage.getItem(cacheKey);
+            if (cached) {
+                const upazilas = JSON.parse(cached);
+                upazilas.forEach(upz => {
+                    const option = document.createElement('option');
+                    option.value = upz.name_en;
+                    option.textContent = upz.name_bn || upz.name_en;
+                    select.appendChild(option);
+                });
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/upazilas/?district=${encodeURIComponent(districtName)}`);
+                const data = await response.json();
+                sessionStorage.setItem(cacheKey, JSON.stringify(data.upazilas));
+                data.upazilas.forEach(upz => {
+                    const option = document.createElement('option');
+                    option.value = upz.name_en;
+                    option.textContent = upz.name_bn || upz.name_en;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading upazilas:', error);
+            }
+        }
+
+        function refreshDynamicFilters(educationOptions, classOptions) {
+            const eduSelect = document.getElementById('education-select');
+            const classSelect = document.getElementById('class-select');
+            const currentEdu = eduSelect.value;
+            const currentClass = classSelect.value;
+
+            eduSelect.innerHTML = '<option value="">সব</option>';
+            educationOptions.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt;
+                eduSelect.appendChild(option);
+            });
+            if (currentEdu) eduSelect.value = currentEdu;
+
+            classSelect.innerHTML = '<option value="">সব শ্রেণী</option>';
+            classOptions.forEach(opt => {
+                const option = document.createElement('option');
+                option.value = opt;
+                option.textContent = opt;
+                classSelect.appendChild(option);
+            });
+            if (currentClass) classSelect.value = currentClass;
+        }
+
+        let populationCoverChart = null;
+        let genderDistributionChart = null;
+        let landDistributionChart = null;
+        let classDistributionChart = null;
+        let landAmountBinsChart = null;
+        let commonCharts = {
+            education: null,
+            mobile: null,
+            smartphone: null
+        };
+
+        // Utility to build a circular legend with checkboxes for pie/donut charts
+        function buildLegendWithCheckbox(chart, legendContainerId) {
+            const card = document.getElementById(chart.canvas.id).closest('.chart-card');
+            const container = document.getElementById(legendContainerId) || card.querySelector('.legend-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const orig = chart._orig || { labels: chart.data.labels, data: chart.data.datasets[0].data, colors: chart.data.datasets[0].backgroundColor };
+
+            orig.labels.forEach((label, idx) => {
+                const wrapper = document.createElement('label');
+                wrapper.className = 'legend-checkbox';
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = true;
+                checkbox.dataset.idx = idx;
+
+                const swatch = document.createElement('span');
+                swatch.className = 'swatch';
+                swatch.style.backgroundColor = orig.colors[idx] || '#888';
+
+                const text = document.createElement('span');
+                text.textContent = label;
+
+                wrapper.appendChild(checkbox);
+                wrapper.appendChild(swatch);
+                wrapper.appendChild(text);
+
+                checkbox.addEventListener('change', () => {
+                    // Rebuild labels/data from checked boxes
+                    const checked = Array.from(container.querySelectorAll('input[type=checkbox]'))
+                        .filter(cb => cb.checked)
+                        .map(cb => parseInt(cb.dataset.idx));
+
+                    const newLabels = checked.map(i => orig.labels[i]);
+                    const newData = checked.map(i => orig.data[i]);
+                    const newColors = checked.map(i => orig.colors[i]);
+
+                    chart.data.labels = newLabels;
+                    chart.data.datasets[0].data = newData;
+                    chart.data.datasets[0].backgroundColor = newColors;
+                    chart.update();
+                });
+
+                container.appendChild(wrapper);
+            });
+    }
+
+        // New: Load land amount bins (0-10,10-50,... greater than 500, others)
+        async function loadLandAmountBinsChart() {
+            const params = getCurrentFilterParams();
+            try {
+                const response = await fetch(`/api/land-amount-bins/?${params.toString()}`);
+                const result = await response.json();
+                const data = result.data || {};
+
+                const labels = ['0-10','10-50','50-100','100-200','200-300','300-500','>500','Others'];
+                const counts = [
+                    data['0_10'] || 0,
+                    data['10_50'] || 0,
+                    data['50_100'] || 0,
+                    data['100_200'] || 0,
+                    data['200_300'] || 0,
+                    data['300_500'] || 0,
+                    data['500_plus'] || 0,
+                    data['others'] || 0
+                ];
+
+                const ctx = document.getElementById('landAmountBinsChart').getContext('2d');
+                if (landAmountBinsChart) {
+                    landAmountBinsChart.destroy();
+                    landAmountBinsChart = null;
+                }
+
+                landAmountBinsChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'কৃষক সংখ্যা',
+                            data: counts,
+                            backgroundColor: 'rgba(52,152,219,0.8)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: {
+                                    ticks: { font: { size: 16 } },
+                                    title: { display: true, text: 'শতক', font: { size: 16 } }
+                                },
+                            y: {
+                                beginAtZero: true,
+                                ticks: { font: { size: 16 } },
+                                title: { display: true, text: 'কৃষক সংখ্যা', font: { size: 16 } }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading land amount bins chart:', error);
+            }
+        }
+
+        // Register DataLabels plugin globally
+        Chart.register(ChartDataLabels);
+
+        async function loadCommonCharts() {
+            const params = getCurrentFilterParams();
+            try {
+                const response = await fetch(`/api/common-stats/?${params.toString()}`);
+                const result = await response.json();
+                const data = result.data;
+
+                // Helper to render donut
+                const renderDonut = (canvasId, labels, counts, chartKey, colors) => {
+                    const ctx = document.getElementById(canvasId).getContext('2d');
+
+                    if (commonCharts[chartKey]) {
+                        commonCharts[chartKey].destroy();
+                    }
+
+                    commonCharts[chartKey] = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: counts,
+                                backgroundColor: colors,
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            // make donut slightly thicker (bigger circle)
+                            cutout: '28%',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                // we render a custom checkbox legend below the chart; hide default legend
+                                legend: {
+                                    display: false,
+                                    position: 'right',
+                                    labels: { font: { family: "'Noto Sans Bengali', sans-serif" } }
+                                },
+                                tooltip: {
+                                    bodyFont: { family: "'Noto Sans Bengali', sans-serif" },
+                                    titleFont: { family: "'Noto Sans Bengali', sans-serif" }
+                                },
+                                datalabels: {
+                                    color: '#fff',
+                                    font: { weight: 'bold', size: 22, family: "'Noto Sans Bengali', sans-serif" },
+                                    formatter: (value, ctx) => {
+                                        const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                        if (total === 0 || value === 0) return null;
+                                        return ((value / total) * 100).toFixed(1) + '%';
+                                    },
+                                    textAlign: 'center'
+                                }
+                            }
+                        }
+                    });
+                    // Preserve original data for checkbox legend rebuilds
+                    commonCharts[chartKey]._orig = { labels: labels.slice(), data: counts.slice(), colors: (colors && colors.slice) ? colors.slice() : [] };
+                };
+
+                // 1. Education
+                const eduLabels = Object.keys(data.education || {});
+                const eduCounts = Object.values(data.education || {});
+                // Generate unique HSL colors per education label to ensure visual distinction
+                const eduColors = eduLabels.map((_, i) => {
+                    if (eduLabels.length === 0) return '#3498db';
+                    const hue = Math.round((i * 360) / eduLabels.length);
+                    return `hsl(${hue},65%,50%)`;
+                });
+                renderDonut('educationChart', eduLabels, eduCounts, 'education', eduColors);
+
+                // 2 & 3: Farmer ID and NID -> show as numeric boxes (not pies)
+                const total = (data.bools && data.bools.farmer_id) ? data.bools.farmer_id.Yes + data.bools.farmer_id.No : 0;
+                // total farmers might be different from total in bools; prefer 'Total' from bools if present
+                const reportedTotal = (data.bools && data.bools.smartphone && typeof data.bools.smartphone.Yes !== 'undefined') ? (data.bools.smartphone.Yes + data.bools.smartphone.No + (data.bools.smartphone['No Data'] || 0)) : null;
+
+                // Update boxes
+                const farmerYes = data.bools && data.bools.farmer_id ? data.bools.farmer_id.Yes || 0 : 0;
+                const farmerNo = data.bools && data.bools.farmer_id ? data.bools.farmer_id.No || 0 : 0;
+                const nidYes = data.bools && data.bools.nid ? data.bools.nid.Yes || 0 : 0;
+                const nidNo = data.bools && data.bools.nid ? data.bools.nid.No || 0 : 0;
+
+                document.getElementById('totalFarmersBox').textContent = (data.bools && typeof data.bools.Total !== 'undefined') ? data.bools.Total : (reportedTotal || '--');
+                // Show only how many farmers have identification numbers (Yes counts)
+                document.getElementById('farmerIdBox').textContent = farmerYes;
+                document.getElementById('nidBox').textContent = nidYes;
+
+
+                // 4. Mobile
+                // Render mobile donut only if the canvas exists and mobile stats are available
+                if (document.getElementById('mobileChart') && data.bools && data.bools.mobile) {
+                    const mobileYes = data.bools.mobile.Yes || 0;
+                    const mobileNo = data.bools.mobile.No || 0;
+                    renderDonut('mobileChart', ['হ্যাঁ', 'না'], [mobileYes, mobileNo], 'mobile', ['#9b59b6', '#e74c3c']);
+                }
+
+                // 5. Smartphone (3 segments)
+                renderDonut('smartphoneChart',
+                    ['হ্যাঁ', 'না', 'তথ্য নেই'],
+                    [data.bools.smartphone.Yes, data.bools.smartphone.No, data.bools.smartphone['No Data']],
+                    'smartphone',
+                    ['#2ecc71', '#e74c3c', '#95a5a6']
+                );
+
+                // After rendering donuts, build checkbox legends
+                setTimeout(() => {
+                    if (commonCharts.education) buildLegendWithCheckbox(commonCharts.education, 'educationLegend');
+                    if (commonCharts.mobile) buildLegendWithCheckbox(commonCharts.mobile, 'mobileLegend');
+                    if (commonCharts.smartphone) buildLegendWithCheckbox(commonCharts.smartphone, 'smartphoneLegend');
+                }, 60);
+
+            } catch (error) {
+                console.error('Error loading common charts:', error);
+            }
+        }
+
+        async function loadClassChart() {
+            const params = getCurrentFilterParams();
+            try {
+                const response = await fetch(`/api/class-stats/?${params.toString()}`);
+                const result = await response.json();
+                const data = result.data;
+
+                if (classDistributionChart) {
+                    classDistributionChart.destroy();
+                    classDistributionChart = null;
+                }
+
+                // Prepare data for chart
+                const labels = Object.keys(data);
+                const counts = Object.values(data);
+
+                const ctx = document.getElementById('classDistributionChart').getContext('2d');
+                classDistributionChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: counts,
+                            backgroundColor: [
+                                '#1abc9c', '#3498db', '#9b59b6', '#f1c40f', '#e67e22', '#e74c3c', '#34495e', '#95a5a6'
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        cutout: '28%',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            // hide built-in legend, we show custom checkbox legend below
+                            legend: { display: false },
+                            tooltip: {
+                                bodyFont: { family: "'Noto Sans Bengali', sans-serif" },
+                                titleFont: { family: "'Noto Sans Bengali', sans-serif" }
+                            },
+                            datalabels: {
+                                color: '#fff',
+                                font: {
+                                    weight: 'bold',
+                                    size: 22,
+                                    family: "'Noto Sans Bengali', sans-serif"
+                                },
+                                formatter: (value, ctx) => {
+                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                    if (total === 0 || value === 0) return null;
+                                    const percentage = ((value / total) * 100).toFixed(1) + '%';
+                                    return percentage; // Just show percentage to save space if labels are long
+                                },
+                                textAlign: 'center'
+                            }
+                        }
+                    }
+                });
+
+                // build legend with checkboxes for class chart
+                setTimeout(() => {
+                    if (classDistributionChart) {
+                        classDistributionChart._orig = { labels: labels, data: counts, colors: classDistributionChart.data.datasets[0].backgroundColor };
+                        buildLegendWithCheckbox(classDistributionChart, 'classLegend');
+                    }
+                }, 50);
+
+            } catch (error) {
+                console.error('Error loading class chart:', error);
+            }
+        }
+
+
+        async function loadLandChart() {
+            const params = getCurrentFilterParams();
+            try {
+                const response = await fetch(`/api/land-stats/?${params.toString()}`);
+                const result = await response.json();
+                const data = result.data;
+
+                if (landDistributionChart) {
+                    landDistributionChart.destroy();
+                    landDistributionChart = null;
+                }
+
+                const labels = ['নিজ জমি', 'লিজ জমি', 'বর্গা জমি'];
+                const counts = [
+                    data['Own Land'] || 0,
+                    data['Lease Land'] || 0,
+                    data['Borga Land'] || 0
+                ];
+
+                const ctx = document.getElementById('landDistributionChart').getContext('2d');
+                landDistributionChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: counts,
+                            backgroundColor: [
+                                '#27ae60', // Green for Own
+                                '#f39c12', // Orange for Lease
+                                '#8e44ad'  // Purple for Borga
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        cutout: '28%',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                bodyFont: { family: "'Noto Sans Bengali', sans-serif" },
+                                titleFont: { family: "'Noto Sans Bengali', sans-serif" }
+                            },
+                            datalabels: {
+                                color: '#fff',
+                                font: {
+                                    weight: 'bold',
+                                    size: 22,
+                                    family: "'Noto Sans Bengali', sans-serif"
+                                },
+                                formatter: (value, ctx) => {
+                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                    if (total === 0 || value === 0) return null;
+                                    const percentage = ((value / total) * 100).toFixed(1) + '%';
+                                    const label = ctx.chart.data.labels[ctx.dataIndex];
+                                    return `${percentage}\n${label}`;
+                                },
+                                textAlign: 'center'
+                            }
+                        }
+                    }
+                });
+
+                // legend
+                setTimeout(() => {
+                    if (landDistributionChart) {
+                        landDistributionChart._orig = { labels: labels, data: counts, colors: landDistributionChart.data.datasets[0].backgroundColor };
+                        buildLegendWithCheckbox(landDistributionChart, 'landLegend');
+                    }
+                }, 50);
+
+            } catch (error) {
+                console.error('Error loading land chart:', error);
+            }
+        }
+
+        async function loadGenderChart() {
+            const params = getCurrentFilterParams();
+            try {
+                const response = await fetch(`/api/gender-stats/?${params.toString()}`);
+                const result = await response.json();
+                const data = result.data;
+
+                const labels = ['পুরুষ', 'মহিলা', 'তথ্য নেই'];
+                const counts = [
+                    (data['Male'] || data['পুরুষ'] || 0),
+                    (data['Female'] || data['মহিলা'] || 0),
+                    (data['No Information'] || 0)
+                ];
+
+                const ctx = document.getElementById('genderDistributionChart').getContext('2d');
+
+                if (genderDistributionChart) {
+                    genderDistributionChart.destroy();
+                }
+
+                genderDistributionChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: counts,
+                            backgroundColor: [
+                                '#3498db', // Male
+                                '#e74c3c', // Female
+                                '#95a5a6'  // No Information
+                            ],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        cutout: '28%',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            // hide built-in legend to avoid overlap with custom checkbox legend
+                            legend: { display: false },
+                            tooltip: {
+                                bodyFont: { family: "'Noto Sans Bengali', sans-serif" },
+                                titleFont: { family: "'Noto Sans Bengali', sans-serif" }
+                            },
+                            datalabels: {
+                                color: '#fff',
+                                font: {
+                                    weight: 'bold',
+                                    size: 22,
+                                    family: "'Noto Sans Bengali', sans-serif"
+                                },
+                                formatter: (value, ctx) => {
+                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                    if (total === 0 || value === 0) return null;
+                                    const percentage = ((value / total) * 100).toFixed(1) + '%';
+                                    const label = ctx.chart.data.labels[ctx.dataIndex];
+                                    return `${percentage}\n${label}`;
+                                },
+                                textAlign: 'center'
+                            }
+                        }
+                    }
+                });
+
+                setTimeout(() => {
+                    if (genderDistributionChart) {
+                        genderDistributionChart._orig = { labels: labels, data: counts, colors: genderDistributionChart.data.datasets[0].backgroundColor };
+                        buildLegendWithCheckbox(genderDistributionChart, 'genderLegend');
+                    }
+                }, 50);
+            } catch (error) {
+                console.error('Error loading gender chart:', error);
+            }
+        }
+
+        async function loadPopulationCoverChart() {
+            const params = new URLSearchParams();
+            const division = document.getElementById('division-select').value;
+            const district = document.getElementById('district-select').value;
+            const upazila = document.getElementById('upazila-select').value;
+
+            if (division) params.append('division', division);
+            if (district) params.append('district', district);
+            if (upazila) params.append('upazila', upazila);
+
+            try {
+                const response = await fetch(`/api/population-cover/?${params.toString()}`);
+                const result = await response.json();
+                const data = result.data;
+
+                const labels = data.map(item => item.area);
+                const populations = data.map(item => item.population);
+                const farmers = data.map(item => item.farmers);
+
+                const ctx = document.getElementById('populationCoverChart').getContext('2d');
+
+                if (populationCoverChart) {
+                    populationCoverChart.destroy();
+                    populationCoverChart = null;
+                }
+
+                populationCoverChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'মোট জনসংখ্যা',
+                                data: populations,
+                                backgroundColor: 'rgba(46, 204, 113, 0.7)', // Green
+                                borderColor: 'rgba(46, 204, 113, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'কৃষক সংখ্যা',
+                                data: farmers,
+                                backgroundColor: 'rgba(231, 76, 60, 0.7)', // Red
+                                borderColor: 'rgba(231, 76, 60, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                        options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: false
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { font: { size: 16 } },
+                                title: {
+                                    display: true,
+                                    text: 'সংখ্যা',
+                                    font: { family: "'Noto Sans Bengali', sans-serif", size: 16 }
+                                }
+                            },
+                            x: {
+                                ticks: { font: { size: 16 } },
+                                title: {
+                                    display: true,
+                                    text: 'এলাকা',
+                                    font: { family: "'Noto Sans Bengali', sans-serif", size: 16 }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading population cover chart:', error);
+            }
+        }
+
+        // Initialize and Parse URL
+        async function init() {
+            // Load base data in parallel
+            await Promise.all([
+                loadFilterOptions(),
+                loadDivisions()
+            ]);
+
+            // Parse URL params
+            const params = new URLSearchParams(window.location.search);
+
+            // Hide most header filters on the analytics (second) panel by default,
+            // but keep division, district and upazila selectors visible.
+            // If the caller explicitly wants all filters shown, pass ?show_filters=1 in the URL.
+            try {
+                const showFilters = params.get('show_filters');
+                const filtersEl = document.querySelector('.filters');
+                if (filtersEl) {
+                    // If explicit show requested, leave everything as-is
+                    if (showFilters === '1') {
+                        filtersEl.style.display = 'flex';
+                    } else {
+                        // Hide all filter-group nodes except those that contain division/district/upazila
+                        const groups = Array.from(filtersEl.querySelectorAll('.filter-group'));
+                        groups.forEach(g => {
+                            const select = g.querySelector('select');
+                            const input = g.querySelector('input');
+                            const id = select ? select.id : (input ? input.id : '');
+                            if (id === 'division-select' || id === 'district-select' || id === 'upazila-select') {
+                                g.style.display = 'flex';
+                            } else {
+                                g.style.display = 'none';
+                            }
+                        });
+                        // keep the overall filters container visible so the three selectors line up
+                        filtersEl.style.display = 'flex';
+                    }
+                }
+            } catch (e) {
+                // ignore
+            }
+            const division = params.get('division');
+            const district = params.get('district');
+            const upazila = params.get('upazila');
+            const education = params.get('education');
+            const className = params.get('class');
+            const gender = params.get('gender');
+            const smartphone = params.get('smart_phone');
+            const search = params.get('search');
+            const landOp = params.get('land_operator');
+            const landAmt = params.get('land_amount');
+
+            // Apply filters sequentially
+            if (division) {
+                document.getElementById('division-select').value = division;
+                const loaders = [loadDistricts(division)];
+
+                if (district) {
+                    document.getElementById('district-select').value = district;
+                    loaders.push(loadUpazilas(district));
+
+                    if (upazila) {
+                        document.getElementById('upazila-select').value = upazila;
+                    }
+                }
+                await Promise.all(loaders);
+            } else {
+                // EXPLICIT RESET to prevent browser auto-fill issues
+                document.getElementById('division-select').value = '';
+                document.getElementById('district-select').value = '';
+                document.getElementById('upazila-select').value = '';
+                document.getElementById('district-select').disabled = true;
+                document.getElementById('upazila-select').disabled = true;
+
+                // Clear other filters
+                document.querySelectorAll('.filters select:not(#division-select):not(#district-select):not(#upazila-select), .filters input').forEach(el => el.value = '');
+            }
+
+            if (education) document.getElementById('education-select').value = education;
+            if (className) document.getElementById('class-select').value = className;
+            if (gender) document.getElementById('gender-select').value = gender;
+            if (smartphone) document.getElementById('smartphone-select').value = smartphone;
+            if (search) document.getElementById('search-input').value = search;
+            if (landOp) document.getElementById('land-operator-select').value = landOp;
+            if (landAmt) document.getElementById('land-amount-input').value = landAmt;
+
+            // Initial chart load
+            await Promise.all([
+                loadPopulationCoverChart(),
+                loadGenderChart(),
+                loadLandChart(),
+                loadClassChart(),
+                loadCommonCharts(),
+                loadLandAmountBinsChart()
+            ]);
+        }
+
+        // Helper to construct URL with current filters
+        function getCurrentFilterParams() {
+            const params = new URLSearchParams();
+            const division = document.getElementById('division-select').value;
+            const district = document.getElementById('district-select').value;
+            const upazila = document.getElementById('upazila-select').value;
+            const education = document.getElementById('education-select').value;
+            const className = document.getElementById('class-select').value;
+            const gender = document.getElementById('gender-select').value;
+            const smartphone = document.getElementById('smartphone-select').value;
+            const search = document.getElementById('search-input').value;
+            const landOp = document.getElementById('land-operator-select').value;
+            const landAmt = document.getElementById('land-amount-input').value;
+
+            if (division) params.append('division', division);
+            if (district) params.append('district', district);
+            if (upazila) params.append('upazila', upazila);
+            if (education) params.append('education', education);
+            if (className) params.append('class', className);
+            if (gender) params.append('gender', gender);
+            if (smartphone) params.append('smart_phone', smartphone);
+            if (search) params.append('search', search);
+            if (landOp) params.append('land_operator', landOp);
+            if (landAmt) params.append('land_amount', landAmt);
+
+            // Preserve pagination and stats toggle from original entry if not changed
+            const urlParams = new URLSearchParams(window.location.search);
+            const page = urlParams.get('page');
+            const showStats = urlParams.get('show_stats');
+            if (page) params.append('page', page);
+            if (showStats) params.append('show_stats', showStats);
+
+            return params;
+        }
+
+        // Event Listeners for cascading (keeping UI consistent if user changes filters here)
+        document.getElementById('division-select').addEventListener('change', async function (e) {
+            document.getElementById('district-select').value = '';
+            document.getElementById('upazila-select').value = '';
+            await loadDistricts(e.target.value);
+            loadPopulationCoverChart();
+            loadGenderChart();
+            loadLandChart();
+            loadClassChart();
+            loadCommonCharts();
+            loadLandAmountBinsChart();
+        });
+
+        document.getElementById('district-select').addEventListener('change', async function (e) {
+            document.getElementById('upazila-select').value = '';
+            await loadUpazilas(e.target.value);
+            loadPopulationCoverChart();
+            loadGenderChart();
+            loadLandChart();
+            loadClassChart();
+            loadCommonCharts();
+            loadLandAmountBinsChart();
+        });
+
+    document.getElementById('upazila-select').addEventListener('change', () => { loadPopulationCoverChart(); loadGenderChart(); loadLandChart(); loadClassChart(); loadCommonCharts(); loadLandAmountBinsChart(); });
+    document.getElementById('class-select').addEventListener('change', () => { loadPopulationCoverChart(); loadGenderChart(); loadLandChart(); loadClassChart(); loadCommonCharts(); loadLandAmountBinsChart(); });
+    document.getElementById('gender-select').addEventListener('change', () => { loadPopulationCoverChart(); loadGenderChart(); loadLandChart(); loadClassChart(); loadCommonCharts(); loadLandAmountBinsChart(); });
+    document.getElementById('education-select').addEventListener('change', () => { loadPopulationCoverChart(); loadGenderChart(); loadLandChart(); loadClassChart(); loadCommonCharts(); loadLandAmountBinsChart(); });
+    document.getElementById('smartphone-select').addEventListener('change', () => { loadPopulationCoverChart(); loadGenderChart(); loadLandChart(); loadClassChart(); loadCommonCharts(); loadLandAmountBinsChart(); });
+    document.getElementById('search-btn').addEventListener('click', () => { loadPopulationCoverChart(); loadGenderChart(); loadLandChart(); loadClassChart(); loadCommonCharts(); loadLandAmountBinsChart(); });
+
+        document.getElementById('clear-filters-btn').addEventListener('click', () => {
+            // Reset all
+            document.querySelectorAll('.filters select, .filters input').forEach(el => el.value = '');
+            // Disable cascading
+            document.getElementById('district-select').disabled = true;
+            document.getElementById('upazila-select').disabled = true;
+            loadPopulationCoverChart();
+            loadGenderChart();
+            loadLandChart();
+            loadClassChart();
+            loadCommonCharts();
+            loadLandAmountBinsChart();
+        });
+
+        // Back Button Logic - Use CURRENT values instead of original URL params
+        document.getElementById('back-btn').addEventListener('click', () => {
+            const params = getCurrentFilterParams();
+            const url = `/?${params.toString()}`;
+            window.location.href = url;
+        });
+
+        // Go Analysis Button - Use CURRENT values
+        document.getElementById('go-analysis-btn').addEventListener('click', () => {
+            const params = getCurrentFilterParams();
+            const url = `/analytics/?${params.toString()}`;
+            window.location.href = url;
+        });
+
+        // Run Init
+        init();
+    </script>
+</body>
+
+</html>
